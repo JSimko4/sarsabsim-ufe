@@ -11,7 +11,6 @@ export class SarsabsimApp {
     return (
       <Host>
         <span>Hello world - Saraka Sabol Šimko </span>
-        <span>Ak to nefunguje tak produkčný cluster zhodil určite Patrik Sabol</span>
       </Host>
     );
   }
