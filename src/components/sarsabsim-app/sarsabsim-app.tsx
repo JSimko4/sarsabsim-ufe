@@ -5,6 +5,7 @@ import { Component, Host, h } from '@stencil/core';
   styleUrl: 'sarsabsim-app.css',
   shadow: true,
 })
+
 export class SarsabsimApp {
   render() {
     return (
