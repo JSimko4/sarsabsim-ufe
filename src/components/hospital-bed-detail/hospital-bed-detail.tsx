@@ -15,6 +15,7 @@ export class HospitalBedDetail {
   @State() showOccupyForm: boolean = false;
   @State() editBed: Partial<Bed> = {};
   @State() selectedPatientId: string = '';
+  @State() allBeds: Bed[] = [];
 
   @Event() back: EventEmitter<void>;
 
@@ -28,16 +29,18 @@ export class HospitalBedDetail {
     }
   }
 
-  private async loadData() {
+    private async loadData() {
     this.loading = true;
     try {
-      const [bed, patients] = await Promise.all([
+      const [bed, patients, allBeds] = await Promise.all([
         HospitalDataService.getBed(this.bedId),
-        HospitalDataService.getPatients()
+        HospitalDataService.getPatients(),
+        HospitalDataService.getAllBeds()
       ]);
 
       this.bed = bed;
       this.patients = patients;
+      this.allBeds = allBeds;
 
       if (this.bed) {
         this.editBed = { ...this.bed };
@@ -122,16 +125,21 @@ export class HospitalBedDetail {
     return patient ? `${patient.first_name} ${patient.last_name}` : 'Neznámy pacient';
   }
 
-  private getAvailablePatients(): Patient[] {
-    return this.patients.filter(patient =>
-      !this.getAllOccupiedPatientIds().includes(patient._id)
-    );
+    private getAvailablePatients(): Patient[] {
+    // Vrátim všetkých pacientov, ale označím hospitalizovaných
+    return this.patients;
   }
 
   private getAllOccupiedPatientIds(): string[] {
-    // V reálnej aplikácii by sme získali všetky obsadené lôžka
-    // Pre teraz vrátime prázdny zoznam
-    return [];
+    // Získame všetky obsadené lôžka okrem aktuálneho lôžka a vyberieme pacientov
+    return this.allBeds
+      .filter(bed => bed._id !== this.bedId && bed.status.patient_id)
+      .map(bed => bed.status.patient_id!)
+      .filter(Boolean);
+  }
+
+  private isPatientHospitalized(patientId: string): boolean {
+    return this.getAllOccupiedPatientIds().includes(patientId);
   }
 
   render() {
@@ -361,19 +369,28 @@ export class HospitalBedDetail {
                      onInput={(e) => this.selectedPatientId = (e.target as HTMLSelectElement).value}
                    >
                                          <option value="" selected={!this.selectedPatientId}>-- Vyberte pacienta --</option>
-                     {availablePatients.map(patient => (
-                       <option key={patient._id} value={patient._id} selected={this.selectedPatientId === patient._id}>
-                         {patient.first_name} {patient.last_name} (ID: {patient._id.slice(-4)})
-                       </option>
-                     ))}
+                     {availablePatients.map(patient => {
+                       const isHospitalized = this.isPatientHospitalized(patient._id);
+                       return (
+                         <option
+                           key={patient._id}
+                           value={patient._id}
+                           selected={this.selectedPatientId === patient._id}
+                           disabled={isHospitalized}
+                         >
+                           {patient.first_name} {patient.last_name} (ID: {patient._id.slice(-4)})
+                           {isHospitalized ? ' (hospitalizovaný aktuálne)' : ''}
+                         </option>
+                       );
+                     })}
                   </select>
                 </div>
 
-                {availablePatients.length === 0 && (
-                  <div class="no-patients">
-                    <p>Žiadni dostupní pacienti pre obsadenie lôžka.</p>
-                  </div>
-                )}
+                                 {availablePatients.filter(p => !this.isPatientHospitalized(p._id)).length === 0 && (
+                   <div class="no-patients">
+                     <p>Žiadni dostupní pacienti pre obsadenie lôžka. Všetci pacienti sú už hospitalizovaní.</p>
+                   </div>
+                 )}
               </div>
 
               <div class="modal-actions">
@@ -386,7 +403,7 @@ export class HospitalBedDetail {
                 <button
                   class="btn-success"
                   onClick={() => this.handleOccupyBed()}
-                  disabled={!this.selectedPatientId}
+                  disabled={!this.selectedPatientId || this.isPatientHospitalized(this.selectedPatientId)}
                 >
                   Obsadiť lôžko
                 </button>

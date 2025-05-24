@@ -62,6 +62,15 @@ export class HospitalPatientDetail {
 
       this.showEditForm = false;
       await this.loadData();
+      // Force component re-render with updated data
+      if (this.patient) {
+        // Trigger re-render by updating state
+        this.patient = { ...this.patient };
+        this.editPatient = { ...this.patient };
+        // Force component update
+        this.loading = true;
+        this.loading = false;
+      }
     } catch (error) {
       console.error('Error updating patient:', error);
       alert('Chyba pri aktualizácii pacienta');
@@ -206,7 +215,7 @@ export class HospitalPatientDetail {
               </div>
               <div class="info-item">
                 <span class="label">Vek:</span>
-                <span class="value">{this.calculateAge(this.patient.birth_date)} rokov</span>
+                <span class="value">{this.patient.age || this.calculateAge(this.patient.birth_date)} rokov</span>
               </div>
               <div class="info-item">
                 <span class="label">Dátum narodenia:</span>

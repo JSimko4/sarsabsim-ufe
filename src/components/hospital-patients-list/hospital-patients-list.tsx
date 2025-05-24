@@ -157,7 +157,7 @@ export class HospitalPatientsList {
               <div class="patient-header">
                 <div class="patient-name">
                   <h3>{patient.first_name} {patient.last_name}</h3>
-                  <span class="age">{this.calculateAge(patient.birth_date)} rokov</span>
+                  <span class="age">{patient.age || this.calculateAge(patient.birth_date)} rokov</span>
                 </div>
                 <div class="patient-actions">
                   <button

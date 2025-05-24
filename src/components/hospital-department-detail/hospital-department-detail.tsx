@@ -69,9 +69,21 @@ export class HospitalDepartmentDetail {
 
       await HospitalDataService.createBed(bedData);
 
+      // Update department capacity
+      if (this.department) {
+        await HospitalDataService.updateDepartment(this.departmentId, {
+          capacity: {
+            ...this.department.capacity,
+            actual_beds: this.department.capacity.actual_beds + 1
+          }
+        });
+      }
+
       this.showAddBedForm = false;
       this.newBed = {};
       await this.loadData();
+      // Force component re-render
+      this.department = { ...this.department };
     } catch (error) {
       console.error('Error creating bed:', error);
       alert('Chyba pri vytváraní lôžka');

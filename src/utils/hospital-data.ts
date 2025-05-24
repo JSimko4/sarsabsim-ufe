@@ -232,6 +232,14 @@ export class HospitalDataService {
   }
 
   // Beds
+  static getAllBeds(): Promise<Bed[]> {
+    return new Promise(resolve => {
+      setTimeout(() => {
+        resolve([...mockBeds]);
+      }, 200);
+    });
+  }
+
   static getBedsByDepartment(departmentId: string): Promise<Bed[]> {
     return new Promise(resolve => {
       setTimeout(() => {
@@ -270,11 +278,28 @@ export class HospitalDataService {
       setTimeout(() => {
         const bedIndex = mockBeds.findIndex(b => b._id === id);
         if (bedIndex >= 0) {
+          const oldBed = mockBeds[bedIndex];
           mockBeds[bedIndex] = {
             ...mockBeds[bedIndex],
             ...updates,
             updated_at: new Date().toISOString()
           };
+
+          // Update department capacity when bed occupancy changes
+          const wasOccupied = !!oldBed.status.patient_id;
+          const isOccupied = !!mockBeds[bedIndex].status.patient_id;
+
+          if (wasOccupied !== isOccupied) {
+            const departmentIndex = mockDepartments.findIndex(d => d._id === oldBed.department_id);
+            if (departmentIndex >= 0) {
+              const currentOccupied = mockDepartments[departmentIndex].capacity.occupied_beds;
+              mockDepartments[departmentIndex].capacity.occupied_beds = isOccupied
+                ? currentOccupied + 1
+                : currentOccupied - 1;
+              mockDepartments[departmentIndex].updated_at = new Date().toISOString();
+            }
+          }
+
           resolve(mockBeds[bedIndex]);
         } else {
           resolve(null);
