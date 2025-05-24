@@ -67,6 +67,8 @@ export class HospitalBedDetail {
 
       this.showEditForm = false;
       await this.loadData();
+      // Force re-render
+      this.bed = { ...this.bed };
     } catch (error) {
       console.error('Error updating bed:', error);
       alert('Chyba pri aktualizácii lôžka');

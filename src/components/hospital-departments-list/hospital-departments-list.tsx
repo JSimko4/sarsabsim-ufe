@@ -55,7 +55,7 @@ export class HospitalDepartmentsList {
         description: this.newDepartment.description,
         floor: this.newDepartment.floor || 1,
         capacity: {
-          maximum_beds: 20,
+          maximum_beds: this.newDepartment.capacity?.maximum_beds || 20,
           actual_beds: 0,
           occupied_beds: 0
         }
@@ -80,7 +80,8 @@ export class HospitalDepartmentsList {
       await HospitalDataService.updateDepartment(this.editingDepartmentId, {
         name: this.editDepartment.name,
         description: this.editDepartment.description,
-        floor: this.editDepartment.floor
+        floor: this.editDepartment.floor,
+        capacity: this.editDepartment.capacity
       });
 
       this.showEditForm = false;
@@ -204,17 +205,39 @@ export class HospitalDepartmentsList {
                   ></textarea>
                 </div>
 
-                <div class="form-group">
-                  <label>Poschodie</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={this.newDepartment.floor || 1}
-                    onInput={(e) => this.newDepartment = {
-                      ...this.newDepartment,
-                      floor: parseInt((e.target as HTMLInputElement).value)
-                    }}
-                  />
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Poschodie</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={this.newDepartment.floor || 1}
+                      onInput={(e) => this.newDepartment = {
+                        ...this.newDepartment,
+                        floor: parseInt((e.target as HTMLInputElement).value)
+                      }}
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label>Maximum lôžok</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={this.newDepartment.capacity?.maximum_beds || 20}
+                      onInput={(e) => this.newDepartment = {
+                        ...this.newDepartment,
+                        capacity: {
+                          ...this.newDepartment.capacity,
+                          maximum_beds: parseInt((e.target as HTMLInputElement).value) || 20,
+                          actual_beds: 0,
+                          occupied_beds: 0
+                        }
+                      }}
+                      placeholder="20"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -276,17 +299,38 @@ export class HospitalDepartmentsList {
                   ></textarea>
                 </div>
 
-                <div class="form-group">
-                  <label>Poschodie</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={this.editDepartment.floor || 1}
-                    onInput={(e) => this.editDepartment = {
-                      ...this.editDepartment,
-                      floor: parseInt((e.target as HTMLInputElement).value)
-                    }}
-                  />
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Poschodie</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={this.editDepartment.floor || 1}
+                      onInput={(e) => this.editDepartment = {
+                        ...this.editDepartment,
+                        floor: parseInt((e.target as HTMLInputElement).value)
+                      }}
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label>Maximum lôžok</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={this.editDepartment.capacity?.maximum_beds || 20}
+                      onInput={(e) => this.editDepartment = {
+                        ...this.editDepartment,
+                        capacity: {
+                          ...this.editDepartment.capacity,
+                          maximum_beds: parseInt((e.target as HTMLInputElement).value) || 20,
+                          actual_beds: this.editDepartment.capacity?.actual_beds || 0,
+                          occupied_beds: this.editDepartment.capacity?.occupied_beds || 0
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 

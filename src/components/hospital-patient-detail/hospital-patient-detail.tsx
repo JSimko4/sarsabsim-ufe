@@ -54,6 +54,7 @@ export class HospitalPatientDetail {
         first_name: this.editPatient.first_name,
         last_name: this.editPatient.last_name,
         birth_date: this.editPatient.birth_date,
+        age: this.editPatient.age || 0,
         gender: this.editPatient.gender,
         phone: this.editPatient.phone,
         email: this.editPatient.email
@@ -336,6 +337,22 @@ export class HospitalPatientDetail {
                     />
                   </div>
 
+                  <div class="form-group">
+                    <label>Vek</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="120"
+                      value={this.editPatient.age || ''}
+                      onInput={(e) => this.editPatient = {
+                        ...this.editPatient,
+                        age: parseInt((e.target as HTMLInputElement).value) || 0
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div class="form-row">
                   <div class="form-group">
                     <label>Pohlavie</label>
                     <select

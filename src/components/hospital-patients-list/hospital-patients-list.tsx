@@ -62,6 +62,7 @@ export class HospitalPatientsList {
         first_name: this.newPatient.first_name,
         last_name: this.newPatient.last_name,
         birth_date: this.newPatient.birth_date,
+        age: this.newPatient.age || 0,
         gender: this.newPatient.gender || 'M',
         phone: this.newPatient.phone || '',
         email: this.newPatient.email || '',
@@ -260,6 +261,23 @@ export class HospitalPatientsList {
                     />
                   </div>
 
+                  <div class="form-group">
+                    <label>Vek</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="120"
+                      value={this.newPatient.age || ''}
+                      onInput={(e) => this.newPatient = {
+                        ...this.newPatient,
+                        age: parseInt((e.target as HTMLInputElement).value) || 0
+                      }}
+                      placeholder="Zadajte vek"
+                    />
+                  </div>
+                </div>
+
+                <div class="form-row">
                   <div class="form-group">
                     <label>Pohlavie</label>
                     <select
