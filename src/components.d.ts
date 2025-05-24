@@ -6,10 +6,129 @@
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 export namespace Components {
+    interface HospitalBedDetail {
+        "bedId": string;
+    }
+    interface HospitalDepartmentDetail {
+        "departmentId": string;
+    }
+    interface HospitalDepartmentsList {
+    }
+    interface HospitalPatientDetail {
+        "patientId": string;
+    }
+    interface HospitalPatientsList {
+    }
     interface SarsabsimApp {
     }
 }
+export interface HospitalBedDetailCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLHospitalBedDetailElement;
+}
+export interface HospitalDepartmentDetailCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLHospitalDepartmentDetailElement;
+}
+export interface HospitalDepartmentsListCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLHospitalDepartmentsListElement;
+}
+export interface HospitalPatientDetailCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLHospitalPatientDetailElement;
+}
+export interface HospitalPatientsListCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLHospitalPatientsListElement;
+}
 declare global {
+    interface HTMLHospitalBedDetailElementEventMap {
+        "back": void;
+    }
+    interface HTMLHospitalBedDetailElement extends Components.HospitalBedDetail, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLHospitalBedDetailElementEventMap>(type: K, listener: (this: HTMLHospitalBedDetailElement, ev: HospitalBedDetailCustomEvent<HTMLHospitalBedDetailElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLHospitalBedDetailElementEventMap>(type: K, listener: (this: HTMLHospitalBedDetailElement, ev: HospitalBedDetailCustomEvent<HTMLHospitalBedDetailElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLHospitalBedDetailElement: {
+        prototype: HTMLHospitalBedDetailElement;
+        new (): HTMLHospitalBedDetailElement;
+    };
+    interface HTMLHospitalDepartmentDetailElementEventMap {
+        "navigate": {page: string, id: string};
+        "back": void;
+    }
+    interface HTMLHospitalDepartmentDetailElement extends Components.HospitalDepartmentDetail, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLHospitalDepartmentDetailElementEventMap>(type: K, listener: (this: HTMLHospitalDepartmentDetailElement, ev: HospitalDepartmentDetailCustomEvent<HTMLHospitalDepartmentDetailElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLHospitalDepartmentDetailElementEventMap>(type: K, listener: (this: HTMLHospitalDepartmentDetailElement, ev: HospitalDepartmentDetailCustomEvent<HTMLHospitalDepartmentDetailElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLHospitalDepartmentDetailElement: {
+        prototype: HTMLHospitalDepartmentDetailElement;
+        new (): HTMLHospitalDepartmentDetailElement;
+    };
+    interface HTMLHospitalDepartmentsListElementEventMap {
+        "navigate": {id: string};
+    }
+    interface HTMLHospitalDepartmentsListElement extends Components.HospitalDepartmentsList, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLHospitalDepartmentsListElementEventMap>(type: K, listener: (this: HTMLHospitalDepartmentsListElement, ev: HospitalDepartmentsListCustomEvent<HTMLHospitalDepartmentsListElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLHospitalDepartmentsListElementEventMap>(type: K, listener: (this: HTMLHospitalDepartmentsListElement, ev: HospitalDepartmentsListCustomEvent<HTMLHospitalDepartmentsListElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLHospitalDepartmentsListElement: {
+        prototype: HTMLHospitalDepartmentsListElement;
+        new (): HTMLHospitalDepartmentsListElement;
+    };
+    interface HTMLHospitalPatientDetailElementEventMap {
+        "back": void;
+    }
+    interface HTMLHospitalPatientDetailElement extends Components.HospitalPatientDetail, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLHospitalPatientDetailElementEventMap>(type: K, listener: (this: HTMLHospitalPatientDetailElement, ev: HospitalPatientDetailCustomEvent<HTMLHospitalPatientDetailElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLHospitalPatientDetailElementEventMap>(type: K, listener: (this: HTMLHospitalPatientDetailElement, ev: HospitalPatientDetailCustomEvent<HTMLHospitalPatientDetailElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLHospitalPatientDetailElement: {
+        prototype: HTMLHospitalPatientDetailElement;
+        new (): HTMLHospitalPatientDetailElement;
+    };
+    interface HTMLHospitalPatientsListElementEventMap {
+        "navigate": {id: string};
+    }
+    interface HTMLHospitalPatientsListElement extends Components.HospitalPatientsList, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLHospitalPatientsListElementEventMap>(type: K, listener: (this: HTMLHospitalPatientsListElement, ev: HospitalPatientsListCustomEvent<HTMLHospitalPatientsListElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLHospitalPatientsListElementEventMap>(type: K, listener: (this: HTMLHospitalPatientsListElement, ev: HospitalPatientsListCustomEvent<HTMLHospitalPatientsListElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLHospitalPatientsListElement: {
+        prototype: HTMLHospitalPatientsListElement;
+        new (): HTMLHospitalPatientsListElement;
+    };
     interface HTMLSarsabsimAppElement extends Components.SarsabsimApp, HTMLStencilElement {
     }
     var HTMLSarsabsimAppElement: {
@@ -17,13 +136,42 @@ declare global {
         new (): HTMLSarsabsimAppElement;
     };
     interface HTMLElementTagNameMap {
+        "hospital-bed-detail": HTMLHospitalBedDetailElement;
+        "hospital-department-detail": HTMLHospitalDepartmentDetailElement;
+        "hospital-departments-list": HTMLHospitalDepartmentsListElement;
+        "hospital-patient-detail": HTMLHospitalPatientDetailElement;
+        "hospital-patients-list": HTMLHospitalPatientsListElement;
         "sarsabsim-app": HTMLSarsabsimAppElement;
     }
 }
 declare namespace LocalJSX {
+    interface HospitalBedDetail {
+        "bedId"?: string;
+        "onBack"?: (event: HospitalBedDetailCustomEvent<void>) => void;
+    }
+    interface HospitalDepartmentDetail {
+        "departmentId"?: string;
+        "onBack"?: (event: HospitalDepartmentDetailCustomEvent<void>) => void;
+        "onNavigate"?: (event: HospitalDepartmentDetailCustomEvent<{page: string, id: string}>) => void;
+    }
+    interface HospitalDepartmentsList {
+        "onNavigate"?: (event: HospitalDepartmentsListCustomEvent<{id: string}>) => void;
+    }
+    interface HospitalPatientDetail {
+        "onBack"?: (event: HospitalPatientDetailCustomEvent<void>) => void;
+        "patientId"?: string;
+    }
+    interface HospitalPatientsList {
+        "onNavigate"?: (event: HospitalPatientsListCustomEvent<{id: string}>) => void;
+    }
     interface SarsabsimApp {
     }
     interface IntrinsicElements {
+        "hospital-bed-detail": HospitalBedDetail;
+        "hospital-department-detail": HospitalDepartmentDetail;
+        "hospital-departments-list": HospitalDepartmentsList;
+        "hospital-patient-detail": HospitalPatientDetail;
+        "hospital-patients-list": HospitalPatientsList;
         "sarsabsim-app": SarsabsimApp;
     }
 }
@@ -31,6 +179,11 @@ export { LocalJSX as JSX };
 declare module "@stencil/core" {
     export namespace JSX {
         interface IntrinsicElements {
+            "hospital-bed-detail": LocalJSX.HospitalBedDetail & JSXBase.HTMLAttributes<HTMLHospitalBedDetailElement>;
+            "hospital-department-detail": LocalJSX.HospitalDepartmentDetail & JSXBase.HTMLAttributes<HTMLHospitalDepartmentDetailElement>;
+            "hospital-departments-list": LocalJSX.HospitalDepartmentsList & JSXBase.HTMLAttributes<HTMLHospitalDepartmentsListElement>;
+            "hospital-patient-detail": LocalJSX.HospitalPatientDetail & JSXBase.HTMLAttributes<HTMLHospitalPatientDetailElement>;
+            "hospital-patients-list": LocalJSX.HospitalPatientsList & JSXBase.HTMLAttributes<HTMLHospitalPatientsListElement>;
             "sarsabsim-app": LocalJSX.SarsabsimApp & JSXBase.HTMLAttributes<HTMLSarsabsimAppElement>;
         }
     }

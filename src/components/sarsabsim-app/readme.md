@@ -5,26 +5,23 @@
 <!-- Auto Generated Below -->
 
 
-## Properties
-
-| Property   | Attribute   | Description | Type     | Default |
-| ---------- | ----------- | ----------- | -------- | ------- |
-| `basePath` | `base-path` |             | `string` | `""`    |
-
-
 ## Dependencies
 
 ### Depends on
 
-- [cv1simko-ambulance-wl-editor](../cv1simko-ambulance-wl-editor)
-- [cv1simko-ambulance-wl-list](../cv1simko-ambulance-wl-list)
+- [hospital-departments-list](../hospital-departments-list)
+- [hospital-department-detail](../hospital-department-detail)
+- [hospital-patients-list](../hospital-patients-list)
+- [hospital-patient-detail](../hospital-patient-detail)
 
 ### Graph
 ```mermaid
 graph TD;
-  cv1simko-ambulance-wl-app --> cv1simko-ambulance-wl-editor
-  cv1simko-ambulance-wl-app --> cv1simko-ambulance-wl-list
-  style cv1simko-ambulance-wl-app fill:#f9f,stroke:#333,stroke-width:4px
+  sarsabsim-app --> hospital-departments-list
+  sarsabsim-app --> hospital-department-detail
+  sarsabsim-app --> hospital-patients-list
+  sarsabsim-app --> hospital-patient-detail
+  style sarsabsim-app fill:#f9f,stroke:#333,stroke-width:4px
 ```
 
 ----------------------------------------------
