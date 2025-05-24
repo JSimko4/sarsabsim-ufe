@@ -1,8 +1,15 @@
-# cv1simko-ambulance-wl-app
+# sarsabsim-app
 
 
 
 <!-- Auto Generated Below -->
+
+
+## Properties
+
+| Property  | Attribute  | Description | Type     | Default                       |
+| --------- | ---------- | ----------- | -------- | ----------------------------- |
+| `apiBase` | `api-base` |             | `string` | `'http://localhost:8080/api'` |
 
 
 ## Dependencies

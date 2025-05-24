@@ -1,0 +1,13 @@
+apis/BedsApi.ts
+apis/DepartmentsApi.ts
+apis/PatientsApi.ts
+apis/index.ts
+index.ts
+models/Bed.ts
+models/BedStatus.ts
+models/Department.ts
+models/DepartmentCapacity.ts
+models/HospitalizationRecord.ts
+models/Patient.ts
+models/index.ts
+runtime.ts

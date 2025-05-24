@@ -1,5 +1,6 @@
 import { Component, h, State, Prop, Event, EventEmitter } from '@stencil/core';
-import { Patient, HospitalDataService } from '../../utils/hospital-data';
+import { HospitalApiService } from '../../utils/hospital-api-service';
+import { Patient, PatientGenderEnum } from '../../api/hospital-management';
 
 @Component({
   tag: 'hospital-patient-detail',
@@ -7,6 +8,7 @@ import { Patient, HospitalDataService } from '../../utils/hospital-data';
   shadow: true,
 })
 export class HospitalPatientDetail {
+  @Prop() apiBase: string;
   @Prop() patientId: string;
   @State() patient: Patient | null = null;
   @State() loading: boolean = true;
@@ -19,7 +21,10 @@ export class HospitalPatientDetail {
 
   @Event() back: EventEmitter<void>;
 
+  private hospitalApiService: HospitalApiService;
+
   async componentWillLoad() {
+    this.hospitalApiService = new HospitalApiService(this.apiBase);
     await this.loadData();
   }
 
@@ -32,7 +37,7 @@ export class HospitalPatientDetail {
   private async loadData() {
     this.loading = true;
     try {
-      this.patient = await HospitalDataService.getPatient(this.patientId);
+      this.patient = await this.hospitalApiService.getPatient(this.patientId);
       if (this.patient) {
         this.editPatient = { ...this.patient };
       }
@@ -43,63 +48,53 @@ export class HospitalPatientDetail {
     }
   }
 
-    private handleOpenEditForm() {
-    // Jednoducho skopíruj všetky údaje z aktuálneho pacienta
-    this.editPatient = {
-      first_name: this.patient?.first_name || '',
-      last_name: this.patient?.last_name || '',
-      birth_date: this.patient?.birth_date || '',
-      age: this.patient?.age || 0,
-      gender: this.patient?.gender || 'M',
-      phone: this.patient?.phone || '',
-      email: this.patient?.email || ''
-    };
-    this.showEditForm = true;
+  private handleOpenEditForm() {
+    if (this.patient) {
+      // Jednoducho skopíruj všetky údaje z aktuálneho pacienta
+      this.editPatient = {
+        firstName: this.patient?.firstName || '',
+        lastName: this.patient?.lastName || '',
+        birthDate: this.patient?.birthDate || new Date(),
+        gender: this.patient?.gender || PatientGenderEnum.M,
+        phone: this.patient?.phone || '',
+        email: this.patient?.email || ''
+      };
+      this.showEditForm = true;
+    }
   }
 
-    private async handleUpdatePatient() {
-    if (!this.editPatient.first_name?.trim() || !this.editPatient.last_name?.trim()) {
-      alert('Prosím vyplňte meno a priezvisko');
+  private async handleUpdatePatient() {
+    if (!this.editPatient.firstName || !this.editPatient.lastName || !this.editPatient.birthDate) {
+      alert('Prosím vyplňte všetky povinné polia');
       return;
     }
 
-    console.log('UPDATE: Začínam update pacienta');
-    console.log('UPDATE: Aktuálny pacient:', this.patient);
-    console.log('UPDATE: Edit data:', this.editPatient);
-
     try {
-      // Aktualizuj len tie polia ktoré sa zmenili, zachovaj všetko ostatné
       const updatedData = {
-        ...this.patient, // zachovaj všetko staré
-        first_name: this.editPatient.first_name.trim(),
-        last_name: this.editPatient.last_name.trim(),
-        birth_date: this.editPatient.birth_date || this.patient?.birth_date || '',
-        age: this.editPatient.age || 0,
-        gender: this.editPatient.gender || this.patient?.gender || 'M',
-        phone: this.editPatient.phone?.trim() || '',
-        email: this.editPatient.email?.trim() || '',
-        updated_at: new Date().toISOString()
+        firstName: this.editPatient.firstName,
+        lastName: this.editPatient.lastName,
+        birthDate: this.editPatient.birthDate,
+        gender: this.editPatient.gender,
+        phone: this.editPatient.phone,
+        email: this.editPatient.email,
+        hospitalizationRecords: this.patient?.hospitalizationRecords || []
       };
 
       console.log('UPDATE: Posielam na server:', updatedData);
 
-      const result = await HospitalDataService.updatePatient(this.patientId, updatedData);
+      const result = await this.hospitalApiService.updatePatient(this.patientId, updatedData);
 
       console.log('UPDATE: Výsledok zo servera:', result);
 
       if (result) {
-        console.log('UPDATE: Aktualizujem stav');
-        // Aktualizuj stav
-        this.patient = { ...result };
+        this.patient = result;
+        this.editPatient = { ...result };
         this.showEditForm = false;
 
-        console.log('UPDATE: Nový stav pacienta:', this.patient);
-      } else {
-        console.log('UPDATE: Server vrátil null');
-        alert('Chyba pri aktualizácii pacienta');
+        console.log('UPDATE: Pacient úspešne aktualizovaný');
       }
     } catch (error) {
-      console.error('UPDATE: Chyba:', error);
+      console.error('UPDATE ERROR:', error);
       alert('Chyba pri aktualizácii pacienta');
     }
   }
@@ -111,16 +106,10 @@ export class HospitalPatientDetail {
     }
 
     try {
-      const newRecord = {
-        id: 'hosp_' + Date.now(),
-        description: this.newHospitalization.description.trim()
-      };
-
-      const updatedRecords = [...(this.patient?.hospitalization_records || []), newRecord];
-
-      const updatedPatient = await HospitalDataService.updatePatient(this.patientId, {
-        hospitalization_records: updatedRecords
-      });
+      const updatedPatient = await this.hospitalApiService.addHospitalizationRecord(
+        this.patientId,
+        { description: this.newHospitalization.description.trim() }
+      );
 
       this.showAddHospitalizationForm = false;
       this.newHospitalization = { description: '' };
@@ -150,15 +139,11 @@ export class HospitalPatientDetail {
     }
 
     try {
-      const updatedRecords = this.patient?.hospitalization_records.map(record =>
-        record.id === this.editHospitalization.id
-          ? { ...record, description: this.editHospitalization.description.trim() }
-          : record
-      ) || [];
-
-      const updatedPatient = await HospitalDataService.updatePatient(this.patientId, {
-        hospitalization_records: updatedRecords
-      });
+      const updatedPatient = await this.hospitalApiService.updateHospitalizationRecord(
+        this.patientId,
+        this.editHospitalization.id,
+        { description: this.editHospitalization.description.trim() }
+      );
 
       this.showEditHospitalizationForm = false;
       this.editHospitalization = { id: '', description: '' };
@@ -182,13 +167,10 @@ export class HospitalPatientDetail {
     }
 
     try {
-      const updatedRecords = this.patient?.hospitalization_records.filter(
-        record => record.id !== hospitalizationId
-      ) || [];
-
-      const updatedPatient = await HospitalDataService.updatePatient(this.patientId, {
-        hospitalization_records: updatedRecords
-      });
+      const updatedPatient = await this.hospitalApiService.deleteHospitalizationRecord(
+        this.patientId,
+        hospitalizationId
+      );
 
       // Update patient state directly
       if (updatedPatient) {
@@ -203,21 +185,20 @@ export class HospitalPatientDetail {
     }
   }
 
-  private formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('sk-SK');
-  }
-
-  private calculateAge(birthDate: string): number {
+  private calculateAge(birthDate: Date | string): number {
+    const birth = typeof birthDate === 'string' ? new Date(birthDate) : birthDate;
     const today = new Date();
-    const birth = new Date(birthDate);
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
-
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
       age--;
     }
-
     return age;
+  }
+
+  private formatDate(date: Date | string): string {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return d.toLocaleDateString('sk-SK');
   }
 
   render() {
@@ -243,7 +224,7 @@ export class HospitalPatientDetail {
           <button class="back-btn" onClick={() => this.back.emit()}>
             ← Späť na zoznam
           </button>
-          <h2>{this.patient.first_name} {this.patient.last_name}</h2>
+          <h2>{this.patient.firstName} {this.patient.lastName}</h2>
           <button
             class="btn-primary"
             onClick={() => this.handleOpenEditForm()}
@@ -258,15 +239,15 @@ export class HospitalPatientDetail {
             <div class="info-grid">
               <div class="info-item">
                 <span class="label">Meno:</span>
-                <span class="value">{this.patient.first_name} {this.patient.last_name}</span>
+                <span class="value">{this.patient.firstName} {this.patient.lastName}</span>
               </div>
               <div class="info-item">
                 <span class="label">Vek:</span>
-                <span class="value">{this.patient.age || this.calculateAge(this.patient.birth_date)} rokov</span>
+                <span class="value">{this.patient.age || this.calculateAge(this.patient.birthDate)} rokov</span>
               </div>
               <div class="info-item">
                 <span class="label">Dátum narodenia:</span>
-                <span class="value">{this.formatDate(this.patient.birth_date)}</span>
+                <span class="value">{this.formatDate(this.patient.birthDate)}</span>
               </div>
               <div class="info-item">
                 <span class="label">Pohlavie:</span>
@@ -282,11 +263,11 @@ export class HospitalPatientDetail {
               </div>
               <div class="info-item">
                 <span class="label">Registrovaný:</span>
-                <span class="value">{this.formatDate(this.patient.created_at)}</span>
+                <span class="value">{this.formatDate(this.patient.createdAt!)}</span>
               </div>
               <div class="info-item">
-                <span class="label">Posledná aktualizácia:</span>
-                <span class="value">{this.formatDate(this.patient.updated_at)}</span>
+                <span class="label">Aktualizovaný:</span>
+                <span class="value">{this.formatDate(this.patient.updatedAt!)}</span>
               </div>
             </div>
           </div>
@@ -303,13 +284,13 @@ export class HospitalPatientDetail {
             </button>
           </div>
 
-          {this.patient.hospitalization_records.length === 0 ? (
+          {this.patient.hospitalizationRecords.length === 0 ? (
             <div class="no-hospitalizations">
               <p>Žiadne záznamy o hospitalizáciách</p>
             </div>
           ) : (
             <div class="hospitalizations-list">
-              {this.patient.hospitalization_records.map((record, index) => (
+              {this.patient.hospitalizationRecords.map((record, index) => (
                 <div key={record.id} class="hospitalization-card">
                   <div class="hospitalization-header">
                     <span class="hospitalization-number">Hospitalizácia #{index + 1}</span>
@@ -359,10 +340,10 @@ export class HospitalPatientDetail {
                     <label>Meno *</label>
                     <input
                       type="text"
-                      value={this.editPatient.first_name || ''}
+                      value={this.editPatient.firstName || ''}
                       onInput={(e) => this.editPatient = {
                         ...this.editPatient,
-                        first_name: (e.target as HTMLInputElement).value
+                        firstName: (e.target as HTMLInputElement).value
                       }}
                     />
                   </div>
@@ -371,10 +352,10 @@ export class HospitalPatientDetail {
                     <label>Priezvisko *</label>
                     <input
                       type="text"
-                      value={this.editPatient.last_name || ''}
+                      value={this.editPatient.lastName || ''}
                       onInput={(e) => this.editPatient = {
                         ...this.editPatient,
-                        last_name: (e.target as HTMLInputElement).value
+                        lastName: (e.target as HTMLInputElement).value
                       }}
                     />
                   </div>
@@ -385,66 +366,52 @@ export class HospitalPatientDetail {
                     <label>Dátum narodenia *</label>
                     <input
                       type="date"
-                      value={this.editPatient.birth_date || ''}
+                      value={this.editPatient.birthDate ? (typeof this.editPatient.birthDate === 'string' ? this.editPatient.birthDate : this.editPatient.birthDate.toISOString().split('T')[0]) : ''}
                       onInput={(e) => this.editPatient = {
                         ...this.editPatient,
-                        birth_date: (e.target as HTMLInputElement).value
+                        birthDate: new Date((e.target as HTMLInputElement).value)
                       }}
                     />
                   </div>
 
-                  <div class="form-group">
-                    <label>Vek</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="120"
-                      value={this.editPatient.age || ''}
-                      onInput={(e) => this.editPatient = {
-                        ...this.editPatient,
-                        age: parseInt((e.target as HTMLInputElement).value) || 0
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div class="form-row">
                   <div class="form-group">
                     <label>Pohlavie</label>
                     <select
                       onInput={(e) => this.editPatient = {
                         ...this.editPatient,
-                        gender: (e.target as HTMLSelectElement).value
+                        gender: (e.target as HTMLSelectElement).value as PatientGenderEnum
                       }}
                     >
-                      <option value="M" selected={this.editPatient.gender === 'M'}>Muž</option>
-                      <option value="F" selected={this.editPatient.gender === 'F'}>Žena</option>
+                      <option value={PatientGenderEnum.M} selected={this.editPatient.gender === PatientGenderEnum.M}>Muž</option>
+                      <option value={PatientGenderEnum.F} selected={this.editPatient.gender === PatientGenderEnum.F}>Žena</option>
                     </select>
                   </div>
                 </div>
 
-                <div class="form-group">
-                  <label>Telefón</label>
-                  <input
-                    type="tel"
-                    value={this.editPatient.phone || ''}
-                    onInput={(e) => this.editPatient = {
-                      ...this.editPatient,
-                      phone: (e.target as HTMLInputElement).value
-                    }}
-                  />
-                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Telefón</label>
+                    <input
+                      type="tel"
+                      value={this.editPatient.phone || ''}
+                      onInput={(e) => this.editPatient = {
+                        ...this.editPatient,
+                        phone: (e.target as HTMLInputElement).value
+                      }}
+                    />
+                  </div>
 
-                <div class="form-group">
-                  <label>Email</label>
-                  <input
-                    type="email"
-                    value={this.editPatient.email || ''}
-                    onInput={(e) => this.editPatient = {
-                      ...this.editPatient,
-                      email: (e.target as HTMLInputElement).value
-                    }}
-                  />
+                  <div class="form-group">
+                    <label>Email</label>
+                    <input
+                      type="email"
+                      value={this.editPatient.email || ''}
+                      onInput={(e) => this.editPatient = {
+                        ...this.editPatient,
+                        email: (e.target as HTMLInputElement).value
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 

@@ -1,5 +1,6 @@
 import { Component, h, State, Prop, Event, EventEmitter } from '@stencil/core';
-import { Bed, Patient, HospitalDataService } from '../../utils/hospital-data';
+import { HospitalApiService } from '../../utils/hospital-api-service';
+import { Bed, Patient, BedBedTypeEnum } from '../../api/hospital-management';
 
 @Component({
   tag: 'hospital-bed-detail',
@@ -7,19 +8,23 @@ import { Bed, Patient, HospitalDataService } from '../../utils/hospital-data';
   shadow: true,
 })
 export class HospitalBedDetail {
+  @Prop() apiBase: string;
   @Prop() bedId: string;
   @State() bed: Bed | null = null;
-  @State() patients: Patient[] = [];
+  @State() patient: Patient | null = null;
+  @State() allPatients: Patient[] = [];
   @State() loading: boolean = true;
-  @State() showEditForm: boolean = false;
-  @State() showOccupyForm: boolean = false;
-  @State() editBed: Partial<Bed> = {};
+  @State() showAssignPatientForm: boolean = false;
+  @State() showEditBedForm: boolean = false;
   @State() selectedPatientId: string = '';
-  @State() allBeds: Bed[] = [];
+  @State() editBed: Partial<Bed> = {};
 
   @Event() back: EventEmitter<void>;
 
+  private hospitalApiService: HospitalApiService;
+
   async componentWillLoad() {
+    this.hospitalApiService = new HospitalApiService(this.apiBase);
     await this.loadData();
   }
 
@@ -29,21 +34,22 @@ export class HospitalBedDetail {
     }
   }
 
-    private async loadData() {
+  private async loadData() {
     this.loading = true;
     try {
-      const [bed, patients, allBeds] = await Promise.all([
-        HospitalDataService.getBed(this.bedId),
-        HospitalDataService.getPatients(),
-        HospitalDataService.getAllBeds()
+      const [bed, patients] = await Promise.all([
+        this.hospitalApiService.getBed(this.bedId),
+        this.hospitalApiService.getPatients()
       ]);
 
       this.bed = bed;
-      this.patients = patients;
-      this.allBeds = allBeds;
+      this.allPatients = patients;
 
-      if (this.bed) {
-        this.editBed = { ...this.bed };
+      // Load patient details if bed is occupied
+      if (bed?.status.patientId) {
+        this.patient = await this.hospitalApiService.getPatient(bed.status.patientId);
+      } else {
+        this.patient = null;
       }
     } catch (error) {
       console.error('Error loading bed data:', error);
@@ -52,94 +58,98 @@ export class HospitalBedDetail {
     }
   }
 
-  private async handleUpdateBed() {
-    if (!this.editBed.bed_type) {
-      alert('Prosím vyplňte všetky povinné polia');
-      return;
-    }
-
-    try {
-      await HospitalDataService.updateBed(this.bedId, {
-        bed_type: this.editBed.bed_type,
-        bed_quality: this.editBed.bed_quality,
-        status: {
-          ...this.bed?.status,
-          description: this.editBed.status?.description || this.bed?.status?.description || ''
-        }
-      });
-
-      this.showEditForm = false;
-      await this.loadData();
-      // Force re-render
-      this.bed = { ...this.bed };
-    } catch (error) {
-      console.error('Error updating bed:', error);
-      alert('Chyba pri aktualizácii lôžka');
-    }
-  }
-
-  private async handleOccupyBed() {
+  private async handleAssignPatient() {
     if (!this.selectedPatientId) {
       alert('Prosím vyberte pacienta');
       return;
     }
 
     try {
-      await HospitalDataService.updateBed(this.bedId, {
+      const selectedPatient = this.allPatients.find(p => p.id === this.selectedPatientId);
+      if (!selectedPatient) {
+        alert('Pacient nenájdený');
+        return;
+      }
+
+      // Update bed status
+      const updatedBed = await this.hospitalApiService.updateBed(this.bedId, {
         status: {
-          patient_id: this.selectedPatientId,
-          description: 'Lôžko obsadené'
+          patientId: this.selectedPatientId,
+          description: `Obsadené pacientom ${selectedPatient.firstName} ${selectedPatient.lastName}`
         }
       });
 
-      this.showOccupyForm = false;
+      // Add hospitalization record to patient
+      await this.hospitalApiService.addHospitalizationRecord(this.selectedPatientId, {
+        description: `Hospitalizácia na lôžku ${this.bed?.id} - ${this.bed?.bedType}`
+      });
+
+      this.showAssignPatientForm = false;
       this.selectedPatientId = '';
       await this.loadData();
     } catch (error) {
-      console.error('Error occupying bed:', error);
-      alert('Chyba pri obsadzovaní lôžka');
+      console.error('Error assigning patient:', error);
+      alert('Chyba pri priradení pacienta');
     }
   }
 
-  private async handleFreeBed() {
-    if (!confirm('Naozaj chcete uvoľniť toto lôžko?')) {
+  private async handleDischargePatient() {
+    if (!confirm('Naozaj chcete prepustiť pacienta z lôžka?')) {
       return;
     }
 
     try {
-      await HospitalDataService.updateBed(this.bedId, {
+      // Update bed status to available
+      await this.hospitalApiService.updateBed(this.bedId, {
         status: {
-          description: 'Lôžko je voľné'
+          patientId: '',
+          description: 'Voľné lôžko'
         }
       });
 
+      this.showAssignPatientForm = false;
       await this.loadData();
     } catch (error) {
-      console.error('Error freeing bed:', error);
-      alert('Chyba pri uvoľňovaní lôžka');
+      console.error('Error discharging patient:', error);
+      alert('Chyba pri prepustení pacienta');
     }
   }
 
-  private getPatientName(patientId: string): string {
-    const patient = this.patients.find(p => p._id === patientId);
-    return patient ? `${patient.first_name} ${patient.last_name}` : 'Neznámy pacient';
+  private handleOpenEditForm() {
+    this.editBed = { ...this.bed };
+    this.showEditBedForm = true;
   }
 
-    private getAvailablePatients(): Patient[] {
-    // Vrátim všetkých pacientov, ale označím hospitalizovaných
-    return this.patients;
+  private async handleUpdateBed() {
+    try {
+      const updatedBed = await this.hospitalApiService.updateBed(this.bedId, this.editBed);
+
+      if (updatedBed) {
+        this.bed = { ...updatedBed };
+      }
+
+      this.showEditBedForm = false;
+      this.editBed = {};
+    } catch (error) {
+      console.error('Error updating bed:', error);
+      alert('Chyba pri aktualizácii lôžka');
+    }
   }
 
-  private getAllOccupiedPatientIds(): string[] {
-    // Získame všetky obsadené lôžka okrem aktuálneho lôžka a vyberieme pacientov
-    return this.allBeds
-      .filter(bed => bed._id !== this.bedId && bed.status.patient_id)
-      .map(bed => bed.status.patient_id!)
-      .filter(Boolean);
+  private getBedStatusClass(): string {
+    return this.bed?.status.patientId ? 'occupied' : 'available';
   }
 
-  private isPatientHospitalized(patientId: string): boolean {
-    return this.getAllOccupiedPatientIds().includes(patientId);
+  private getBedStatusText(): string {
+    return this.bed?.status.patientId ? 'Obsadené' : 'Voľné';
+  }
+
+  private getAvailablePatients(): Patient[] {
+    // Filter out patients who are already assigned to other beds
+    return this.allPatients.filter(patient => {
+      // You might want to add logic here to check if patient is already hospitalized
+      return true;
+    });
   }
 
   render() {
@@ -159,125 +169,154 @@ export class HospitalBedDetail {
       );
     }
 
-    const isOccupied = !!this.bed.status.patient_id;
-    const availablePatients = this.getAvailablePatients();
-
     return (
       <div class="container">
         <div class="header">
           <button class="back-btn" onClick={() => this.back.emit()}>
-            ← Späť na oddelenie
+            ← Späť
           </button>
-          <h2>Lôžko #{this.bed._id.slice(-4)}</h2>
-          <div class="actions">
+          <h2>Lôžko #{this.bed.id?.slice(-4)}</h2>
+          <div class="header-actions">
             <button
               class="btn-secondary"
-              onClick={() => this.showEditForm = true}
+              onClick={() => this.handleOpenEditForm()}
             >
               ✏️ Upraviť lôžko
             </button>
-            {isOccupied ? (
+            {this.bed.status.patientId ? (
               <button
                 class="btn-warning"
-                onClick={() => this.handleFreeBed()}
+                onClick={() => this.handleDischargePatient()}
               >
-                🚪 Uvoľniť lôžko
+                🏥 Prepustiť pacienta
               </button>
             ) : (
               <button
                 class="btn-success"
-                onClick={() => this.showOccupyForm = true}
+                onClick={() => this.showAssignPatientForm = true}
               >
-                👤 Obsadiť lôžko
+                👤 Priradiť pacienta
               </button>
             )}
           </div>
         </div>
 
         <div class="bed-info">
-          <div class="status-card">
-            <div class={`status-indicator ${isOccupied ? 'occupied' : 'available'}`}>
-              <span class="status-icon">{isOccupied ? '🔴' : '🟢'}</span>
-              <span>{isOccupied ? 'OBSADENÉ' : 'VOĽNÉ'}</span>
+          <div class="info-card">
+            <h3>Informácie o lôžku</h3>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="label">ID:</span>
+                <span>{this.bed.id}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Typ:</span>
+                <span>{this.bed.bedType}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Kvalita:</span>
+                <span>{(this.bed.bedQuality * 100).toFixed(0)}%</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Stav:</span>
+                <span class={`status-badge ${this.getBedStatusClass()}`}>
+                  {this.getBedStatusText()}
+                </span>
+              </div>
+              <div class="info-item">
+                <span class="label">Poznámka:</span>
+                <span>{this.bed.status.description}</span>
+              </div>
             </div>
           </div>
 
-          <div class="details-grid">
-            <div class="detail-card">
-              <h3>Základné informácie</h3>
-              <div class="detail-list">
-                <div class="detail-item">
-                  <span class="label">ID lôžka:</span>
-                  <span class="value">{this.bed._id}</span>
+          {this.patient && (
+            <div class="patient-card">
+              <h3>Aktuálny pacient</h3>
+              <div class="patient-info">
+                <div class="patient-detail">
+                  <span class="label">Meno:</span>
+                  <span>{this.patient.firstName} {this.patient.lastName}</span>
                 </div>
-                <div class="detail-item">
-                  <span class="label">Typ lôžka:</span>
-                  <span class="value">{this.bed.bed_type}</span>
+                <div class="patient-detail">
+                  <span class="label">Vek:</span>
+                  <span>{this.patient.age} rokov</span>
                 </div>
-                <div class="detail-item">
-                  <span class="label">Kvalita:</span>
-                  <span class="value">
-                    <div class="quality-bar">
-                      <div
-                        class="quality-fill"
-                        style={{width: `${this.bed.bed_quality * 100}%`}}
-                      ></div>
-                    </div>
-                    {(this.bed.bed_quality * 100).toFixed(0)}%
-                  </span>
+                <div class="patient-detail">
+                  <span class="label">Pohlavie:</span>
+                  <span>{this.patient.gender === 'M' ? 'Muž' : 'Žena'}</span>
                 </div>
-                <div class="detail-item">
-                  <span class="label">Stav:</span>
-                  <span class={`value ${isOccupied ? '' : 'available'}`}>
-                    {isOccupied ? 'Obsadené' : 'Voľné'}
-                  </span>
+                <div class="patient-detail">
+                  <span class="label">Telefón:</span>
+                  <span>{this.patient.phone || 'Nezadané'}</span>
                 </div>
-                <div class="detail-item">
-                  <span class="label">Popis:</span>
-                  <span class="value description">{this.bed.status.description}</span>
+                <div class="patient-detail">
+                  <span class="label">Email:</span>
+                  <span>{this.patient.email || 'Nezadané'}</span>
                 </div>
               </div>
             </div>
+          )}
+                    </div>
 
-            <div class="detail-card">
-              <h3>Informácie o pacientovi</h3>
-              <div class="detail-list">
-                {isOccupied ? (
-                  <>
-                    <div class="detail-item">
-                      <span class="label">Pacient:</span>
-                      <span class="value patient-name">
-                        {this.getPatientName(this.bed.status.patient_id!)}
-                      </span>
+        {/* Assign Patient Modal */}
+        {this.showAssignPatientForm && (
+          <div class="modal-overlay">
+            <div class="modal">
+              <div class="modal-header">
+                <h3>Priradiť pacienta k lôžku</h3>
+                <button
+                  class="close-btn"
+                  onClick={() => this.showAssignPatientForm = false}
+                >
+                  ×
+                </button>
                     </div>
-                    <div class="detail-item">
-                      <span class="label">ID pacienta:</span>
-                      <span class="value">{this.bed.status.patient_id}</span>
+
+              <div class="modal-content">
+                <div class="form-group">
+                  <label>Vyberte pacienta *</label>
+                  <select
+                    required
+                    onInput={(e) => this.selectedPatientId = (e.target as HTMLSelectElement).value}
+                  >
+                    <option value="">Vyberte pacienta</option>
+                    {this.getAvailablePatients().map(patient => (
+                      <option key={patient.id} value={patient.id}>
+                        {patient.firstName} {patient.lastName} (Vek: {patient.age})
+                      </option>
+                    ))}
+                  </select>
                     </div>
-                    <div class="detail-item">
-                      <span class="label">Dátum obsadenia:</span>
-                      <span class="value">{new Date(this.bed.updated_at).toLocaleDateString('sk-SK')}</span>
-                    </div>
-                  </>
-                ) : (
-                  <div class="detail-item">
-                    <span class="value available">Lôžko je momentálne voľné</span>
                   </div>
-                )}
+
+              <div class="modal-actions">
+                <button
+                  class="btn-secondary"
+                  onClick={() => this.showAssignPatientForm = false}
+                >
+                  Zrušiť
+                </button>
+                <button
+                  class="btn-primary"
+                  onClick={() => this.handleAssignPatient()}
+                >
+                  Priradiť
+                </button>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Edit Bed Form Modal */}
-        {this.showEditForm && (
+        {/* Edit Bed Modal */}
+        {this.showEditBedForm && (
           <div class="modal-overlay">
             <div class="modal">
               <div class="modal-header">
                 <h3>Upraviť lôžko</h3>
                 <button
                   class="close-btn"
-                  onClick={() => this.showEditForm = false}
+                  onClick={() => this.showEditBedForm = false}
                 >
                   ×
                 </button>
@@ -285,17 +324,17 @@ export class HospitalBedDetail {
 
               <div class="modal-content">
                 <div class="form-group">
-                  <label>Typ lôžka *</label>
+                  <label>Typ lôžka</label>
                   <select
                     onInput={(e) => this.editBed = {
                       ...this.editBed,
-                      bed_type: (e.target as HTMLSelectElement).value
+                      bedType: (e.target as HTMLSelectElement).value as BedBedTypeEnum
                     }}
                   >
-                    <option value="standard" selected={this.editBed.bed_type === 'standard'}>Štandardné</option>
-                    <option value="intensive" selected={this.editBed.bed_type === 'intensive'}>Intenzívne</option>
-                    <option value="isolation" selected={this.editBed.bed_type === 'isolation'}>Izolačné</option>
-                    <option value="recovery" selected={this.editBed.bed_type === 'recovery'}>Rekonvalescenčné</option>
+                    <option value={BedBedTypeEnum.Standard} selected={this.editBed.bedType === BedBedTypeEnum.Standard}>Štandardné</option>
+                    <option value={BedBedTypeEnum.Intensive} selected={this.editBed.bedType === BedBedTypeEnum.Intensive}>Intenzívne</option>
+                    <option value={BedBedTypeEnum.Isolation} selected={this.editBed.bedType === BedBedTypeEnum.Isolation}>Izolačné</option>
+                    <option value={BedBedTypeEnum.Recovery} selected={this.editBed.bedType === BedBedTypeEnum.Recovery}>Zotavovňa</option>
                   </select>
                 </div>
 
@@ -306,18 +345,18 @@ export class HospitalBedDetail {
                     min="0"
                     max="1"
                     step="0.1"
-                    value={this.editBed.bed_quality || 0.8}
+                    value={this.editBed.bedQuality}
                     onInput={(e) => this.editBed = {
                       ...this.editBed,
-                      bed_quality: parseFloat((e.target as HTMLInputElement).value)
+                      bedQuality: parseFloat((e.target as HTMLInputElement).value)
                     }}
                   />
                 </div>
 
                 <div class="form-group">
-                  <label>Popis/Poznámka</label>
+                  <label>Poznámka</label>
                   <textarea
-                    value={this.editBed.status?.description || ''}
+                    value={this.editBed.status?.description}
                     onInput={(e) => this.editBed = {
                       ...this.editBed,
                       status: {
@@ -325,15 +364,14 @@ export class HospitalBedDetail {
                         description: (e.target as HTMLTextAreaElement).value
                       }
                     }}
-                    rows={3}
-                  ></textarea>
+                  />
                 </div>
               </div>
 
               <div class="modal-actions">
                 <button
                   class="btn-secondary"
-                  onClick={() => this.showEditForm = false}
+                  onClick={() => this.showEditBedForm = false}
                 >
                   Zrušiť
                 </button>
@@ -341,71 +379,7 @@ export class HospitalBedDetail {
                   class="btn-primary"
                   onClick={() => this.handleUpdateBed()}
                 >
-                  Uložiť zmeny
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Occupy Bed Form Modal */}
-        {this.showOccupyForm && (
-          <div class="modal-overlay">
-            <div class="modal">
-              <div class="modal-header">
-                <h3>Obsadiť lôžko</h3>
-                <button
-                  class="close-btn"
-                  onClick={() => this.showOccupyForm = false}
-                >
-                  ×
-                </button>
-              </div>
-
-              <div class="modal-content">
-                <div class="form-group">
-                  <label>Vyberte pacienta *</label>
-                                     <select
-                     onInput={(e) => this.selectedPatientId = (e.target as HTMLSelectElement).value}
-                   >
-                                         <option value="" selected={!this.selectedPatientId}>-- Vyberte pacienta --</option>
-                     {availablePatients.map(patient => {
-                       const isHospitalized = this.isPatientHospitalized(patient._id);
-                       return (
-                         <option
-                           key={patient._id}
-                           value={patient._id}
-                           selected={this.selectedPatientId === patient._id}
-                           disabled={isHospitalized}
-                         >
-                           {patient.first_name} {patient.last_name} (ID: {patient._id.slice(-4)})
-                           {isHospitalized ? ' (hospitalizovaný aktuálne)' : ''}
-                         </option>
-                       );
-                     })}
-                  </select>
-                </div>
-
-                                 {availablePatients.filter(p => !this.isPatientHospitalized(p._id)).length === 0 && (
-                   <div class="no-patients">
-                     <p>Žiadni dostupní pacienti pre obsadenie lôžka. Všetci pacienti sú už hospitalizovaní.</p>
-                   </div>
-                 )}
-              </div>
-
-              <div class="modal-actions">
-                <button
-                  class="btn-secondary"
-                  onClick={() => this.showOccupyForm = false}
-                >
-                  Zrušiť
-                </button>
-                <button
-                  class="btn-success"
-                  onClick={() => this.handleOccupyBed()}
-                  disabled={!this.selectedPatientId || this.isPatientHospitalized(this.selectedPatientId)}
-                >
-                  Obsadiť lôžko
+                  Uložiť
                 </button>
               </div>
             </div>

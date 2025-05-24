@@ -1,5 +1,6 @@
-import { Component, h, State, Event, EventEmitter } from '@stencil/core';
-import { Department, HospitalDataService } from '../../utils/hospital-data';
+import { Component, h, State, Event, EventEmitter, Prop } from '@stencil/core';
+import { HospitalApiService } from '../../utils/hospital-api-service';
+import { Department } from '../../api/hospital-management';
 
 @Component({
   tag: 'hospital-departments-list',
@@ -7,6 +8,7 @@ import { Department, HospitalDataService } from '../../utils/hospital-data';
   shadow: true,
 })
 export class HospitalDepartmentsList {
+  @Prop() apiBase: string;
   @State() departments: Department[] = [];
   @State() loading: boolean = true;
   @State() showAddForm: boolean = false;
@@ -15,16 +17,19 @@ export class HospitalDepartmentsList {
   @State() editDepartment: Partial<Department> = {};
   @State() editingDepartmentId: string = '';
 
-  @Event() navigate: EventEmitter<{id: string}>;
+  @Event() departmentSelected: EventEmitter<string>;
 
-  async componentWillLoad() {
-    await this.loadDepartments();
+  private hospitalApiService: HospitalApiService;
+
+  componentWillLoad() {
+    this.hospitalApiService = new HospitalApiService(this.apiBase);
+    this.loadData();
   }
 
-  private async loadDepartments() {
+  private async loadData() {
     this.loading = true;
     try {
-      this.departments = await HospitalDataService.getDepartments();
+      this.departments = await this.hospitalApiService.getDepartments();
     } catch (error) {
       console.error('Error loading departments:', error);
     } finally {
@@ -33,37 +38,40 @@ export class HospitalDepartmentsList {
   }
 
   private handleDepartmentClick(department: Department) {
-    this.navigate.emit({ id: department._id });
+    this.departmentSelected.emit(department.id!);
   }
 
-  private handleEditDepartment(department: Department, event: Event) {
-    event.stopPropagation();
-    this.editingDepartmentId = department._id;
+  private handleEditDepartment(department: Department) {
     this.editDepartment = { ...department };
+    this.editingDepartmentId = department.id!;
     this.showEditForm = true;
   }
 
-  private async handleAddDepartment() {
-    if (!this.newDepartment.name || !this.newDepartment.description) {
+  private async handleCreateDepartment() {
+    if (!this.newDepartment.name || !this.newDepartment.description ) {
       alert('Prosím vyplňte všetky povinné polia');
       return;
     }
 
+    // Use default values if not set
+    const floor = this.newDepartment.floor || 1;
+    const maximumBeds = this.newDepartment.capacity?.maximumBeds || 20;
+
     try {
-      await HospitalDataService.createDepartment({
+      await this.hospitalApiService.createDepartment({
         name: this.newDepartment.name,
         description: this.newDepartment.description,
-        floor: this.newDepartment.floor || 1,
+        floor: floor,
         capacity: {
-          maximum_beds: this.newDepartment.capacity?.maximum_beds || 20,
-          actual_beds: 0,
-          occupied_beds: 0
+          maximumBeds: maximumBeds,
+          actualBeds: 0,
+          occupiedBeds: 0
         }
       });
 
       this.showAddForm = false;
       this.newDepartment = {};
-      await this.loadDepartments();
+      await this.loadData();
     } catch (error) {
       console.error('Error creating department:', error);
       alert('Chyba pri vytváraní oddelenia');
@@ -77,7 +85,7 @@ export class HospitalDepartmentsList {
     }
 
     try {
-      await HospitalDataService.updateDepartment(this.editingDepartmentId, {
+      await this.hospitalApiService.updateDepartment(this.editingDepartmentId, {
         name: this.editDepartment.name,
         description: this.editDepartment.description,
         floor: this.editDepartment.floor,
@@ -87,7 +95,7 @@ export class HospitalDepartmentsList {
       this.showEditForm = false;
       this.editDepartment = {};
       this.editingDepartmentId = '';
-      await this.loadDepartments();
+      await this.loadData();
     } catch (error) {
       console.error('Error updating department:', error);
       alert('Chyba pri aktualizácii oddelenia');
@@ -109,16 +117,26 @@ export class HospitalDepartmentsList {
           <h2>Oddelenia nemocnice</h2>
           <button
             class="btn-primary"
-            onClick={() => this.showAddForm = true}
+            onClick={() => {
+              this.newDepartment = {
+                floor: 1,
+                capacity: {
+                  maximumBeds: 20,
+                  actualBeds: 0,
+                  occupiedBeds: 0
+                }
+              };
+              this.showAddForm = true;
+            }}
           >
             + Pridať oddelenie
           </button>
         </div>
 
         <div class="departments-grid">
-          {this.departments.map(dept => (
+          {this.departments.map((dept) => (
             <div
-              key={dept._id}
+              key={dept.id}
               class="department-card"
               onClick={() => this.handleDepartmentClick(dept)}
             >
@@ -127,38 +145,34 @@ export class HospitalDepartmentsList {
                 <div class="department-actions">
                   <button
                     class="edit-btn"
-                    onClick={(e) => this.handleEditDepartment(dept, e)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      this.handleEditDepartment(dept);
+                    }}
                     title="Upraviť oddelenie"
                   >
                     ✏️
                   </button>
-                  <span class="floor-badge">Poschodie {dept.floor}</span>
                 </div>
               </div>
-              <p class="description">{dept.description}</p>
-
-              <div class="capacity-info">
-                <div class="capacity-row">
-                  <span>Kapacita lôžok:</span>
-                  <span class="capacity-numbers">
-                    {dept.capacity.occupied_beds} / {dept.capacity.actual_beds}
-                  </span>
+              <p class="department-description">{dept.description}</p>
+              <div class="department-info">
+                <div class="info-item">
+                  <span class="label">Poschodie:</span>
+                  <span class="value">{dept.floor}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Kapacita:</span>
+                  <span class="value">{dept.capacity.occupiedBeds}/{dept.capacity.actualBeds}</span>
                 </div>
                 <div class="capacity-bar">
                   <div
                     class="capacity-fill"
-                    style={{
-                      width: `${(dept.capacity.occupied_beds / dept.capacity.actual_beds) * 100 || 0}%`
-                    }}
+                    style={{width: `${(dept.capacity.occupiedBeds / dept.capacity.actualBeds) * 100}%`}}
                   ></div>
                 </div>
-                <div class="capacity-labels">
-                  <span class="available">
-                    Voľné: {dept.capacity.actual_beds - dept.capacity.occupied_beds}
-                  </span>
-                  <span class="occupied">
-                    Obsadené: {dept.capacity.occupied_beds}
-                  </span>
+                <div class="capacity-text">
+                  {dept.capacity.actualBeds - dept.capacity.occupiedBeds} voľných lôžok
                 </div>
               </div>
             </div>
@@ -172,7 +186,10 @@ export class HospitalDepartmentsList {
                 <h3>Pridať nové oddelenie</h3>
                 <button
                   class="close-btn"
-                  onClick={() => this.showAddForm = false}
+                  onClick={() => {
+                    this.newDepartment = {};
+                    this.showAddForm = false;
+                  }}
                 >
                   ×
                 </button>
@@ -225,14 +242,14 @@ export class HospitalDepartmentsList {
                       type="number"
                       min="1"
                       max="100"
-                      value={this.newDepartment.capacity?.maximum_beds || 20}
+                      value={this.newDepartment.capacity?.maximumBeds || 20}
                       onInput={(e) => this.newDepartment = {
                         ...this.newDepartment,
                         capacity: {
                           ...this.newDepartment.capacity,
-                          maximum_beds: parseInt((e.target as HTMLInputElement).value) || 20,
-                          actual_beds: 0,
-                          occupied_beds: 0
+                          maximumBeds: parseInt((e.target as HTMLInputElement).value) || 20,
+                          actualBeds: 0,
+                          occupiedBeds: 0
                         }
                       }}
                       placeholder="20"
@@ -244,13 +261,16 @@ export class HospitalDepartmentsList {
               <div class="modal-actions">
                 <button
                   class="btn-secondary"
-                  onClick={() => this.showAddForm = false}
+                  onClick={() => {
+                    this.newDepartment = {};
+                    this.showAddForm = false;
+                  }}
                 >
                   Zrušiť
                 </button>
                 <button
                   class="btn-primary"
-                  onClick={() => this.handleAddDepartment()}
+                  onClick={() => this.handleCreateDepartment()}
                 >
                   Pridať
                 </button>
@@ -319,14 +339,14 @@ export class HospitalDepartmentsList {
                       type="number"
                       min="1"
                       max="100"
-                      value={this.editDepartment.capacity?.maximum_beds || 20}
+                      value={this.editDepartment.capacity?.maximumBeds || 20}
                       onInput={(e) => this.editDepartment = {
                         ...this.editDepartment,
                         capacity: {
                           ...this.editDepartment.capacity,
-                          maximum_beds: parseInt((e.target as HTMLInputElement).value) || 20,
-                          actual_beds: this.editDepartment.capacity?.actual_beds || 0,
-                          occupied_beds: this.editDepartment.capacity?.occupied_beds || 0
+                          maximumBeds: parseInt((e.target as HTMLInputElement).value) || 20,
+                          actualBeds: this.editDepartment.capacity?.actualBeds || 0,
+                          occupiedBeds: this.editDepartment.capacity?.occupiedBeds || 0
                         }
                       }}
                     />
@@ -355,3 +375,4 @@ export class HospitalDepartmentsList {
     );
   }
 }
+

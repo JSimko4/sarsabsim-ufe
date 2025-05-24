@@ -7,19 +7,25 @@
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 export namespace Components {
     interface HospitalBedDetail {
+        "apiBase": string;
         "bedId": string;
     }
     interface HospitalDepartmentDetail {
+        "apiBase": string;
         "departmentId": string;
     }
     interface HospitalDepartmentsList {
+        "apiBase": string;
     }
     interface HospitalPatientDetail {
+        "apiBase": string;
         "patientId": string;
     }
     interface HospitalPatientsList {
+        "apiBase": string;
     }
     interface SarsabsimApp {
+        "apiBase": string;
     }
 }
 export interface HospitalBedDetailCustomEvent<T> extends CustomEvent<T> {
@@ -61,8 +67,8 @@ declare global {
         new (): HTMLHospitalBedDetailElement;
     };
     interface HTMLHospitalDepartmentDetailElementEventMap {
-        "navigate": {page: string, id: string};
         "back": void;
+        "bedSelected": string;
     }
     interface HTMLHospitalDepartmentDetailElement extends Components.HospitalDepartmentDetail, HTMLStencilElement {
         addEventListener<K extends keyof HTMLHospitalDepartmentDetailElementEventMap>(type: K, listener: (this: HTMLHospitalDepartmentDetailElement, ev: HospitalDepartmentDetailCustomEvent<HTMLHospitalDepartmentDetailElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
@@ -79,7 +85,7 @@ declare global {
         new (): HTMLHospitalDepartmentDetailElement;
     };
     interface HTMLHospitalDepartmentsListElementEventMap {
-        "navigate": {id: string};
+        "departmentSelected": string;
     }
     interface HTMLHospitalDepartmentsListElement extends Components.HospitalDepartmentsList, HTMLStencilElement {
         addEventListener<K extends keyof HTMLHospitalDepartmentsListElementEventMap>(type: K, listener: (this: HTMLHospitalDepartmentsListElement, ev: HospitalDepartmentsListCustomEvent<HTMLHospitalDepartmentsListElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
@@ -113,7 +119,7 @@ declare global {
         new (): HTMLHospitalPatientDetailElement;
     };
     interface HTMLHospitalPatientsListElementEventMap {
-        "navigate": {id: string};
+        "patientSelected": string;
     }
     interface HTMLHospitalPatientsListElement extends Components.HospitalPatientsList, HTMLStencilElement {
         addEventListener<K extends keyof HTMLHospitalPatientsListElementEventMap>(type: K, listener: (this: HTMLHospitalPatientsListElement, ev: HospitalPatientsListCustomEvent<HTMLHospitalPatientsListElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
@@ -146,25 +152,31 @@ declare global {
 }
 declare namespace LocalJSX {
     interface HospitalBedDetail {
+        "apiBase"?: string;
         "bedId"?: string;
         "onBack"?: (event: HospitalBedDetailCustomEvent<void>) => void;
     }
     interface HospitalDepartmentDetail {
+        "apiBase"?: string;
         "departmentId"?: string;
         "onBack"?: (event: HospitalDepartmentDetailCustomEvent<void>) => void;
-        "onNavigate"?: (event: HospitalDepartmentDetailCustomEvent<{page: string, id: string}>) => void;
+        "onBedSelected"?: (event: HospitalDepartmentDetailCustomEvent<string>) => void;
     }
     interface HospitalDepartmentsList {
-        "onNavigate"?: (event: HospitalDepartmentsListCustomEvent<{id: string}>) => void;
+        "apiBase"?: string;
+        "onDepartmentSelected"?: (event: HospitalDepartmentsListCustomEvent<string>) => void;
     }
     interface HospitalPatientDetail {
+        "apiBase"?: string;
         "onBack"?: (event: HospitalPatientDetailCustomEvent<void>) => void;
         "patientId"?: string;
     }
     interface HospitalPatientsList {
-        "onNavigate"?: (event: HospitalPatientsListCustomEvent<{id: string}>) => void;
+        "apiBase"?: string;
+        "onPatientSelected"?: (event: HospitalPatientsListCustomEvent<string>) => void;
     }
     interface SarsabsimApp {
+        "apiBase"?: string;
     }
     interface IntrinsicElements {
         "hospital-bed-detail": HospitalBedDetail;

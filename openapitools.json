@@ -12,6 +12,15 @@
                   "supportsES6": "true",
                   "withInterfaces": true
               }
+          },
+          "hospital-management": {
+              "generatorName": "typescript-fetch",
+              "glob": "api/hospital-management.openapi.yaml",
+              "output": "#{cwd}/src/api/hospital-management",
+              "additionalProperties": {
+                  "supportsES6": "true",
+                  "withInterfaces": true
+              }
           }
       }
   }

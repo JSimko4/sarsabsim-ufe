@@ -143,7 +143,6 @@
   flex: 1;
   word-break: break-word;
   overflow-wrap: break-word;
-  max-width: 0;
 }
 
 .hospitalizations-section {

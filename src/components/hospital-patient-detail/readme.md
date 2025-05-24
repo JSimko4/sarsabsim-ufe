@@ -9,6 +9,7 @@
 
 | Property    | Attribute    | Description | Type     | Default     |
 | ----------- | ------------ | ----------- | -------- | ----------- |
+| `apiBase`   | `api-base`   |             | `string` | `undefined` |
 | `patientId` | `patient-id` |             | `string` | `undefined` |
 
 

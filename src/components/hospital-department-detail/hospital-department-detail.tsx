@@ -1,5 +1,6 @@
 import { Component, h, State, Prop, Event, EventEmitter } from '@stencil/core';
-import { Department, Bed, HospitalDataService, Patient } from '../../utils/hospital-data';
+import { HospitalApiService } from '../../utils/hospital-api-service';
+import { Department, Bed, BedBedTypeEnum } from '../../api/hospital-management';
 
 @Component({
   tag: 'hospital-department-detail',
@@ -7,18 +8,21 @@ import { Department, Bed, HospitalDataService, Patient } from '../../utils/hospi
   shadow: true,
 })
 export class HospitalDepartmentDetail {
+  @Prop() apiBase: string;
   @Prop() departmentId: string;
   @State() department: Department | null = null;
   @State() beds: Bed[] = [];
-  @State() patients: Patient[] = [];
   @State() loading: boolean = true;
   @State() showAddBedForm: boolean = false;
   @State() newBed: Partial<Bed> = {};
 
-  @Event() navigate: EventEmitter<{page: string, id: string}>;
   @Event() back: EventEmitter<void>;
+  @Event() bedSelected: EventEmitter<string>;
+
+  private hospitalApiService: HospitalApiService;
 
   async componentWillLoad() {
+    this.hospitalApiService = new HospitalApiService(this.apiBase);
     await this.loadData();
   }
 
@@ -31,15 +35,13 @@ export class HospitalDepartmentDetail {
   private async loadData() {
     this.loading = true;
     try {
-      const [department, beds, patients] = await Promise.all([
-        HospitalDataService.getDepartment(this.departmentId),
-        HospitalDataService.getBedsByDepartment(this.departmentId),
-        HospitalDataService.getPatients()
+      const [department, beds] = await Promise.all([
+        this.hospitalApiService.getDepartment(this.departmentId),
+        this.hospitalApiService.getBedsByDepartment(this.departmentId)
       ]);
 
       this.department = department;
       this.beds = beds;
-      this.patients = patients;
     } catch (error) {
       console.error('Error loading department data:', error);
     } finally {
@@ -48,33 +50,33 @@ export class HospitalDepartmentDetail {
   }
 
   private handleBedClick(bed: Bed) {
-    this.navigate.emit({ page: 'bed-detail', id: bed._id });
+    this.bedSelected.emit(bed.id!);
   }
 
   private async handleAddBed() {
-    if (!this.newBed.bed_type) {
+    if (!this.newBed.bedType) {
       alert('Prosím vyplňte všetky povinné polia');
       return;
     }
 
     try {
-      const bedData: Omit<Bed, '_id' | 'created_at' | 'updated_at'> = {
-        department_id: this.departmentId,
-        bed_type: this.newBed.bed_type,
-        bed_quality: this.newBed.bed_quality || 0.8,
+      const bedData = {
+        departmentId: this.departmentId,
+        bedType: this.newBed.bedType,
+        bedQuality: this.newBed.bedQuality || 0.8,
         status: {
-          description: 'Nové lôžko - voľné'
+          description: 'Nové lôžko'
         }
       };
 
-      await HospitalDataService.createBed(bedData);
+      await this.hospitalApiService.createBed(this.departmentId, bedData);
 
       // Update department capacity
       if (this.department) {
-        await HospitalDataService.updateDepartment(this.departmentId, {
+        await this.hospitalApiService.updateDepartment(this.departmentId, {
           capacity: {
             ...this.department.capacity,
-            actual_beds: this.department.capacity.actual_beds + 1
+            actualBeds: this.department.capacity.actualBeds + 1
           }
         });
       }
@@ -82,25 +84,23 @@ export class HospitalDepartmentDetail {
       this.showAddBedForm = false;
       this.newBed = {};
       await this.loadData();
-      // Force component re-render
-      this.department = { ...this.department };
     } catch (error) {
       console.error('Error creating bed:', error);
       alert('Chyba pri vytváraní lôžka');
     }
   }
 
-  private getPatientName(patientId: string): string {
-    const patient = this.patients.find(p => p._id === patientId);
-    return patient ? `${patient.first_name} ${patient.last_name}` : 'Neznámy pacient';
+  private getBedStatusClass(bed: Bed): string {
+    return bed.status.patientId ? 'occupied' : 'available';
   }
 
-  private getBedStatusClass(bed: Bed): string {
-    return bed.status.patient_id ? 'bed-occupied' : 'bed-available';
+  private getPatientName(patientId: string): string {
+    // TODO: Load patient data separately if needed
+    return 'Pacient';
   }
 
   private getBedStatusText(bed: Bed): string {
-    return bed.status.patient_id ? 'Obsadené' : 'Voľné';
+    return bed.status.patientId ? 'Obsadené' : 'Voľné';
   }
 
   render() {
@@ -149,20 +149,20 @@ export class HospitalDepartmentDetail {
               </div>
               <div class="info-item">
                 <span class="label">Maximálna kapacita:</span>
-                <span>{this.department.capacity.maximum_beds} lôžok</span>
+                <span>{this.department.capacity.maximumBeds} lôžok</span>
               </div>
               <div class="info-item">
                 <span class="label">Aktuálne lôžka:</span>
-                <span>{this.department.capacity.actual_beds}</span>
+                <span>{this.department.capacity.actualBeds}</span>
               </div>
               <div class="info-item">
                 <span class="label">Obsadené:</span>
-                <span class="occupied">{this.department.capacity.occupied_beds}</span>
+                <span class="occupied">{this.department.capacity.occupiedBeds}</span>
               </div>
               <div class="info-item">
                 <span class="label">Voľné:</span>
                 <span class="available">
-                  {this.department.capacity.actual_beds - this.department.capacity.occupied_beds}
+                  {this.department.capacity.actualBeds - this.department.capacity.occupiedBeds}
                 </span>
               </div>
             </div>
@@ -175,16 +175,16 @@ export class HospitalDepartmentDetail {
                 <div
                   class="chart-fill"
                   style={{
-                    width: `${(this.department.capacity.occupied_beds / this.department.capacity.actual_beds) * 100 || 0}%`
+                    width: `${(this.department.capacity.occupiedBeds / this.department.capacity.actualBeds) * 100 || 0}%`
                   }}
                 ></div>
               </div>
               <div class="chart-labels">
                 <span class="available">
-                  Voľné: {this.department.capacity.actual_beds - this.department.capacity.occupied_beds}
+                  Voľné: {this.department.capacity.actualBeds - this.department.capacity.occupiedBeds}
                 </span>
                 <span class="occupied">
-                  Obsadené: {this.department.capacity.occupied_beds}
+                  Obsadené: {this.department.capacity.occupiedBeds}
                 </span>
               </div>
             </div>
@@ -208,13 +208,13 @@ export class HospitalDepartmentDetail {
           <div class="beds-grid">
             {this.beds.map(bed => (
               <div
-                key={bed._id}
+                key={bed.id}
                 class={`bed-card ${this.getBedStatusClass(bed)}`}
                 onClick={() => this.handleBedClick(bed)}
               >
                 <div class="bed-header">
-                  <span class="bed-id">Lôžko #{bed._id.slice(-4)}</span>
-                  <span class={`bed-status ${this.getBedStatusClass(bed)}`}>
+                  <span class="bed-id">#{bed.id?.slice(-4)}</span>
+                  <span class={`status-badge ${this.getBedStatusClass(bed)}`}>
                     {this.getBedStatusText(bed)}
                   </span>
                 </div>
@@ -222,18 +222,18 @@ export class HospitalDepartmentDetail {
                 <div class="bed-info">
                   <div class="bed-detail">
                     <span class="label">Typ:</span>
-                    <span>{bed.bed_type}</span>
+                    <span>{bed.bedType}</span>
                   </div>
                   <div class="bed-detail">
                     <span class="label">Kvalita:</span>
-                    <span>{(bed.bed_quality * 100).toFixed(0)}%</span>
+                    <span>{(bed.bedQuality * 100).toFixed(0)}%</span>
                   </div>
 
-                  {bed.status.patient_id && (
+                  {bed.status.patientId && (
                     <div class="bed-detail">
                       <span class="label">Pacient:</span>
                       <span class="patient-name">
-                        {this.getPatientName(bed.status.patient_id)}
+                        {this.getPatientName(bed.status.patientId)}
                       </span>
                     </div>
                   )}
@@ -265,16 +265,17 @@ export class HospitalDepartmentDetail {
                 <div class="form-group">
                   <label>Typ lôžka *</label>
                   <select
+                    required
                     onInput={(e) => this.newBed = {
                       ...this.newBed,
-                      bed_type: (e.target as HTMLSelectElement).value
+                      bedType: (e.target as HTMLSelectElement).value as BedBedTypeEnum
                     }}
                   >
                     <option value="">Vyberte typ lôžka</option>
-                    <option value="standard">Štandardné</option>
-                    <option value="intensive">Intenzívne</option>
-                    <option value="isolation">Izolačné</option>
-                    <option value="recovery">Rekonvalescenčné</option>
+                    <option value={BedBedTypeEnum.Standard}>Štandardné</option>
+                    <option value={BedBedTypeEnum.Intensive}>Intenzívne</option>
+                    <option value={BedBedTypeEnum.Isolation}>Izolačné</option>
+                    <option value={BedBedTypeEnum.Recovery}>Zotavovňa</option>
                   </select>
                 </div>
 
@@ -285,10 +286,10 @@ export class HospitalDepartmentDetail {
                     min="0"
                     max="1"
                     step="0.1"
-                    value={this.newBed.bed_quality || 0.8}
+                    value={this.newBed.bedQuality || 0.8}
                     onInput={(e) => this.newBed = {
                       ...this.newBed,
-                      bed_quality: parseFloat((e.target as HTMLInputElement).value)
+                      bedQuality: parseFloat((e.target as HTMLInputElement).value)
                     }}
                   />
                 </div>

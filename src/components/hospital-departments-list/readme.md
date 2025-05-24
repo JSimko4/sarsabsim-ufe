@@ -5,11 +5,18 @@
 <!-- Auto Generated Below -->
 
 
+## Properties
+
+| Property  | Attribute  | Description | Type     | Default     |
+| --------- | ---------- | ----------- | -------- | ----------- |
+| `apiBase` | `api-base` |             | `string` | `undefined` |
+
+
 ## Events
 
-| Event      | Description | Type                           |
-| ---------- | ----------- | ------------------------------ |
-| `navigate` |             | `CustomEvent<{ id: string; }>` |
+| Event                | Description | Type                  |
+| -------------------- | ----------- | --------------------- |
+| `departmentSelected` |             | `CustomEvent<string>` |
 
 
 ## Dependencies

@@ -1,0 +1,527 @@
+openapi: 3.0.0
+servers:
+  - description: Cluster Endpoint
+    url: /api
+info:
+  description: Hospital Management System for Web-In-Cloud system
+  version: "1.0.0"
+  title: Hospital Management Api
+  contact:
+    email: student@stuba.sk
+  license:
+    name: CC BY 4.0
+    url: "https://creativecommons.org/licenses/by/4.0/"
+tags:
+- name: departments
+  description: Hospital Departments API
+- name: beds
+  description: Hospital Beds API
+- name: patients
+  description: Hospital Patients API
+paths:
+  "/departments":
+    get:
+      tags:
+        - departments
+      summary: Provides the list of all departments
+      operationId: getDepartments
+      description: Get list of all hospital departments
+      responses:
+        "200":
+          description: List of departments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Department"
+    post:
+      tags:
+        - departments
+      summary: Creates new department
+      operationId: createDepartment
+      description: Use this method to create a new department
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Department"
+        description: Department to create
+        required: true
+      responses:
+        "201":
+          description: Department created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+        "400":
+          description: Missing mandatory properties of input object
+
+  "/departments/{departmentId}":
+    get:
+      tags:
+        - departments
+      summary: Provides details about specific department
+      operationId: getDepartment
+      description: Get details of particular department
+      parameters:
+        - in: path
+          name: departmentId
+          description: Department ID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Department details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+        "404":
+          description: Department with such ID does not exist
+    put:
+      tags:
+        - departments
+      summary: Updates specific department
+      operationId: updateDepartment
+      description: Use this method to update department details
+      parameters:
+        - in: path
+          name: departmentId
+          description: Department ID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Department"
+        description: Department data to update
+        required: true
+      responses:
+        "200":
+          description: Department updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+        "404":
+          description: Department with such ID does not exist
+    delete:
+      tags:
+        - departments
+      summary: Deletes specific department
+      operationId: deleteDepartment
+      description: Use this method to delete specific department
+      parameters:
+        - in: path
+          name: departmentId
+          description: Department ID
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Department deleted
+        "404":
+          description: Department with such ID does not exist
+
+  "/departments/{departmentId}/beds":
+    get:
+      tags:
+        - beds
+      summary: Provides beds for specific department
+      operationId: getDepartmentBeds
+      description: Get list of beds in specific department
+      parameters:
+        - in: path
+          name: departmentId
+          description: Department ID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of beds in department
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bed"
+        "404":
+          description: Department with such ID does not exist
+
+  "/beds":
+    get:
+      tags:
+        - beds
+      summary: Get all beds
+      operationId: getBeds
+      description: Get list of all beds in hospital
+      responses:
+        "200":
+          description: List of beds
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bed"
+    post:
+      tags:
+        - beds
+      summary: Create new bed
+      operationId: createBed
+      description: Create a new bed
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Bed"
+        description: Bed to create
+        required: true
+      responses:
+        "201":
+          description: Bed created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bed"
+        "400":
+          description: Invalid request body
+
+  "/beds/{bedId}":
+    get:
+      tags:
+        - beds
+      summary: Provides details about specific bed
+      operationId: getBed
+      description: Get details of particular bed
+      parameters:
+        - in: path
+          name: bedId
+          description: Bed ID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Bed details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bed"
+        "404":
+          description: Bed with such ID does not exist
+    put:
+      tags:
+        - beds
+      summary: Updates specific bed
+      operationId: updateBed
+      description: Use this method to update bed details
+      parameters:
+        - in: path
+          name: bedId
+          description: Bed ID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Bed"
+        description: Bed data to update
+        required: true
+      responses:
+        "200":
+          description: Bed updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bed"
+        "404":
+          description: Bed with such ID does not exist
+    delete:
+      tags:
+        - beds
+      summary: Deletes specific bed
+      operationId: deleteBed
+      description: Use this method to delete specific bed
+      parameters:
+        - in: path
+          name: bedId
+          description: Bed ID
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Bed deleted
+        "404":
+          description: Bed with such ID does not exist
+
+  "/patients":
+    get:
+      tags:
+        - patients
+      summary: Provides the list of all patients
+      operationId: getPatients
+      description: Get list of all patients
+      responses:
+        "200":
+          description: List of patients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Patient"
+    post:
+      tags:
+        - patients
+      summary: Creates new patient
+      operationId: createPatient
+      description: Use this method to create a new patient
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Patient"
+        description: Patient to create
+        required: true
+      responses:
+        "201":
+          description: Patient created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+        "400":
+          description: Missing mandatory properties of input object
+
+  "/patients/{patientId}":
+    get:
+      tags:
+        - patients
+      summary: Provides details about specific patient
+      operationId: getPatient
+      description: Get details of particular patient
+      parameters:
+        - in: path
+          name: patientId
+          description: Patient ID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Patient details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+        "404":
+          description: Patient with such ID does not exist
+    put:
+      tags:
+        - patients
+      summary: Updates specific patient
+      operationId: updatePatient
+      description: Use this method to update patient details
+      parameters:
+        - in: path
+          name: patientId
+          description: Patient ID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Patient"
+        description: Patient data to update
+        required: true
+      responses:
+        "200":
+          description: Patient updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+        "404":
+          description: Patient with such ID does not exist
+    delete:
+      tags:
+        - patients
+      summary: Deletes specific patient
+      operationId: deletePatient
+      description: Use this method to delete specific patient
+      parameters:
+        - in: path
+          name: patientId
+          description: Patient ID
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Patient deleted
+        "404":
+          description: Patient with such ID does not exist
+
+components:
+  schemas:
+    Department:
+      type: object
+      required:
+        - name
+        - floor
+      properties:
+        id:
+          type: string
+          description: Unique identifier
+        name:
+          type: string
+          description: Department name
+          example: "Kardiológia"
+        description:
+          type: string
+          description: Department description
+          example: "Oddelenie kardiológie"
+        floor:
+          type: integer
+          description: Floor number
+          example: 3
+        capacity:
+          $ref: "#/components/schemas/DepartmentCapacity"
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    DepartmentCapacity:
+      type: object
+      properties:
+        maximumBeds:
+          type: integer
+          description: Maximum number of beds
+          example: 20
+        actualBeds:
+          type: integer
+          description: Actual number of beds available
+          example: 18
+        occupiedBeds:
+          type: integer
+          description: Number of currently occupied beds
+          example: 10
+
+    Bed:
+      type: object
+      required:
+        - departmentId
+        - bedType
+      properties:
+        id:
+          type: string
+          description: Unique identifier
+        departmentId:
+          type: string
+          description: Department ID where bed is located
+        bedType:
+          type: string
+          description: Type of bed
+          example: "standard"
+        bedQuality:
+          type: number
+          format: double
+          description: Quality rating (0.0 - 1.0)
+          example: 0.8
+        status:
+          $ref: "#/components/schemas/BedStatus"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    BedStatus:
+      type: object
+      properties:
+        patientId:
+          type: string
+          description: Patient ID if bed is occupied
+        description:
+          type: string
+          description: Status description
+          example: "available"
+
+    Patient:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - birthDate
+        - gender
+      properties:
+        id:
+          type: string
+          description: Unique identifier
+        firstName:
+          type: string
+          description: Patient first name
+          example: "Mária"
+        lastName:
+          type: string
+          description: Patient last name
+          example: "Svobodová"
+        birthDate:
+          type: string
+          description: Birth date
+          example: "1985-03-15"
+        age:
+          type: integer
+          description: Patient age (calculated from birth date)
+        gender:
+          type: string
+          description: Gender
+          example: "F"
+        phone:
+          type: string
+          description: Phone number
+          example: "+421902345678"
+        email:
+          type: string
+          description: Email address
+          example: "maria.svobodova@email.sk"
+        hospitalizationRecords:
+          type: array
+          items:
+            $ref: "#/components/schemas/HospitalizationRecord"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    HospitalizationRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier
+        description:
+          type: string
+          description: Hospitalization description
+          example: "Hospitalizácia pre infekčnú chorobu"
