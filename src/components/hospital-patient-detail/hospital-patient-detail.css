@@ -198,6 +198,32 @@
   border-bottom: 1px solid #e0e0e0;
 }
 
+.hospitalization-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.edit-btn {
+  background: transparent;
+  border: none;
+  color: #1976d2;
+  padding: 0.5rem;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: all 0.2s ease;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-btn:hover {
+  background-color: #e3f2fd;
+  transform: scale(1.1);
+}
+
 .hospitalization-number {
   font-weight: 500;
   color: #1976d2;

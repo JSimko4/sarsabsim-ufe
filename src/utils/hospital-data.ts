@@ -31,6 +31,7 @@ export interface Patient {
   first_name: string;
   last_name: string;
   birth_date: string;
+  age: number;
   gender: string;
   phone: string;
   email: string;
@@ -129,6 +130,7 @@ const mockPatients: Patient[] = [
     first_name: "Mária",
     last_name: "Svobodová",
     birth_date: "1985-03-15",
+    age: 39,
     gender: "F",
     phone: "+421902345678",
     email: "maria.svobodova@email.sk",
@@ -150,6 +152,7 @@ const mockPatients: Patient[] = [
     first_name: "Ján",
     last_name: "Novák",
     birth_date: "1978-11-22",
+    age: 45,
     gender: "M",
     phone: "+421905123456",
     email: "jan.novak@email.sk",
@@ -167,6 +170,7 @@ const mockPatients: Patient[] = [
     first_name: "Anna",
     last_name: "Kováčová",
     birth_date: "1992-07-08",
+    age: 32,
     gender: "F",
     phone: "+421907654321",
     email: "anna.kovacova@email.sk",

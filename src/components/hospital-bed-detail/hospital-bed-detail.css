@@ -116,9 +116,7 @@
 }
 
 .bed-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
+  margin-bottom: 3rem;
 }
 
 .status-card {
@@ -127,6 +125,7 @@
   padding: 2rem;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   border: 1px solid #e0e0e0;
+  margin-bottom: 2rem;
   text-align: center;
 }
 
@@ -135,16 +134,20 @@
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  font-size: 1.25rem;
-  font-weight: 500;
-}
-
-.status-indicator.available {
-  color: #4caf50;
+  font-size: 1.5rem;
+  font-weight: 600;
+  padding: 1rem;
+  border-radius: 8px;
 }
 
 .status-indicator.occupied {
-  color: #f44336;
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.status-indicator.available {
+  background-color: #e8f5e8;
+  color: #2e7d32;
 }
 
 .status-icon {
@@ -153,14 +156,14 @@
 
 .details-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 2rem;
 }
 
 .detail-card {
   background: white;
   border-radius: 8px;
-  padding: 1.5rem;
+  padding: 2rem;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   border: 1px solid #e0e0e0;
 }
@@ -169,7 +172,7 @@
   margin: 0 0 1.5rem 0;
   color: #333;
   font-weight: 500;
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   border-bottom: 2px solid #1976d2;
   padding-bottom: 0.5rem;
 }
@@ -183,8 +186,8 @@
 .detail-item {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  padding: 0.75rem 0;
+  align-items: center;
+  padding: 1rem 0;
   border-bottom: 1px solid #f0f0f0;
 }
 
@@ -195,29 +198,28 @@
 .detail-item .label {
   font-weight: 500;
   color: #666;
-  min-width: 120px;
+  min-width: 140px;
 }
 
 .detail-item .value {
+  color: #333;
   text-align: right;
   flex: 1;
-  margin-left: 1rem;
 }
 
-.patient-name {
-  color: #1976d2;
-  font-weight: 500;
-}
-
-.available {
+.detail-item .value.available {
   color: #4caf50;
   font-weight: 500;
 }
 
-.description {
-  color: #666;
+.detail-item .value.patient-name {
+  color: #1976d2;
+  font-weight: 500;
+}
+
+.detail-item .value.description {
   font-style: italic;
-  word-wrap: break-word;
+  color: #666;
 }
 
 .quality-bar {
@@ -225,11 +227,9 @@
   height: 8px;
   background-color: #e0e0e0;
   border-radius: 4px;
-  margin-bottom: 0.25rem;
   overflow: hidden;
-  display: inline-block;
-  vertical-align: middle;
   margin-right: 0.5rem;
+  display: inline-block;
 }
 
 .quality-fill {
@@ -334,6 +334,7 @@
   font-size: 0.9rem;
   transition: border-color 0.2s ease;
   box-sizing: border-box;
+  font-family: inherit;
 }
 
 .form-group input:focus,
@@ -344,12 +345,24 @@
   box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
 }
 
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
   padding: 1.5rem;
   border-top: 1px solid #e0e0e0;
+}
+
+.no-patients {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+  font-style: italic;
 }
 
 /* Responsive design */
@@ -365,18 +378,12 @@
   }
 
   .actions {
+    flex-direction: column;
     width: 100%;
-    justify-content: flex-start;
-    flex-wrap: wrap;
   }
 
   .details-grid {
     grid-template-columns: 1fr;
-  }
-
-  .status-indicator {
-    flex-direction: column;
-    gap: 0.5rem;
   }
 
   .detail-item {
@@ -387,6 +394,10 @@
 
   .detail-item .value {
     text-align: left;
-    margin-left: 0;
+  }
+
+  .modal {
+    width: 95%;
+    margin: 1rem;
   }
 }

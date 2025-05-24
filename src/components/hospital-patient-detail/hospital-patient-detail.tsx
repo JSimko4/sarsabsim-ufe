@@ -438,6 +438,53 @@ export class HospitalPatientDetail {
             </div>
           </div>
         )}
+
+        {/* Edit Hospitalization Form Modal */}
+        {this.showEditHospitalizationForm && (
+          <div class="modal-overlay">
+            <div class="modal">
+              <div class="modal-header">
+                <h3>Upraviť hospitalizáciu</h3>
+                <button
+                  class="close-btn"
+                  onClick={() => this.showEditHospitalizationForm = false}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div class="modal-content">
+                <div class="form-group">
+                  <label>Popis hospitalizácie *</label>
+                  <textarea
+                    value={this.editHospitalization.description}
+                    onInput={(e) => this.editHospitalization = {
+                      ...this.editHospitalization,
+                      description: (e.target as HTMLTextAreaElement).value
+                    }}
+                    placeholder="Opíšte dôvod a priebeh hospitalizácie..."
+                    rows={4}
+                  ></textarea>
+                </div>
+              </div>
+
+              <div class="modal-actions">
+                <button
+                  class="btn-secondary"
+                  onClick={() => this.showEditHospitalizationForm = false}
+                >
+                  Zrušiť
+                </button>
+                <button
+                  class="btn-primary"
+                  onClick={() => this.handleUpdateHospitalization()}
+                >
+                  Uložiť zmeny
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
