@@ -24,7 +24,7 @@ export class HospitalPatientDetail {
   }
 
   async componentWillUpdate() {
-    if (this.patientId) {
+    if (this.patientId && !this.patient) {
       await this.loadData();
     }
   }
@@ -43,36 +43,63 @@ export class HospitalPatientDetail {
     }
   }
 
-  private async handleUpdatePatient() {
-    if (!this.editPatient.first_name || !this.editPatient.last_name) {
-      alert('Prosím vyplňte všetky povinné polia');
+    private handleOpenEditForm() {
+    // Jednoducho skopíruj všetky údaje z aktuálneho pacienta
+    this.editPatient = {
+      first_name: this.patient?.first_name || '',
+      last_name: this.patient?.last_name || '',
+      birth_date: this.patient?.birth_date || '',
+      age: this.patient?.age || 0,
+      gender: this.patient?.gender || 'M',
+      phone: this.patient?.phone || '',
+      email: this.patient?.email || ''
+    };
+    this.showEditForm = true;
+  }
+
+    private async handleUpdatePatient() {
+    if (!this.editPatient.first_name?.trim() || !this.editPatient.last_name?.trim()) {
+      alert('Prosím vyplňte meno a priezvisko');
       return;
     }
 
-    try {
-      await HospitalDataService.updatePatient(this.patientId, {
-        first_name: this.editPatient.first_name,
-        last_name: this.editPatient.last_name,
-        birth_date: this.editPatient.birth_date,
-        age: this.editPatient.age || 0,
-        gender: this.editPatient.gender,
-        phone: this.editPatient.phone,
-        email: this.editPatient.email
-      });
+    console.log('UPDATE: Začínam update pacienta');
+    console.log('UPDATE: Aktuálny pacient:', this.patient);
+    console.log('UPDATE: Edit data:', this.editPatient);
 
-      this.showEditForm = false;
-      await this.loadData();
-      // Force component re-render with updated data
-      if (this.patient) {
-        // Trigger re-render by updating state
-        this.patient = { ...this.patient };
-        this.editPatient = { ...this.patient };
-        // Force component update
-        this.loading = true;
-        this.loading = false;
+    try {
+      // Aktualizuj len tie polia ktoré sa zmenili, zachovaj všetko ostatné
+      const updatedData = {
+        ...this.patient, // zachovaj všetko staré
+        first_name: this.editPatient.first_name.trim(),
+        last_name: this.editPatient.last_name.trim(),
+        birth_date: this.editPatient.birth_date || this.patient?.birth_date || '',
+        age: this.editPatient.age || 0,
+        gender: this.editPatient.gender || this.patient?.gender || 'M',
+        phone: this.editPatient.phone?.trim() || '',
+        email: this.editPatient.email?.trim() || '',
+        updated_at: new Date().toISOString()
+      };
+
+      console.log('UPDATE: Posielam na server:', updatedData);
+
+      const result = await HospitalDataService.updatePatient(this.patientId, updatedData);
+
+      console.log('UPDATE: Výsledok zo servera:', result);
+
+      if (result) {
+        console.log('UPDATE: Aktualizujem stav');
+        // Aktualizuj stav
+        this.patient = { ...result };
+        this.showEditForm = false;
+
+        console.log('UPDATE: Nový stav pacienta:', this.patient);
+      } else {
+        console.log('UPDATE: Server vrátil null');
+        alert('Chyba pri aktualizácii pacienta');
       }
     } catch (error) {
-      console.error('Error updating patient:', error);
+      console.error('UPDATE: Chyba:', error);
       alert('Chyba pri aktualizácii pacienta');
     }
   }
@@ -91,13 +118,20 @@ export class HospitalPatientDetail {
 
       const updatedRecords = [...(this.patient?.hospitalization_records || []), newRecord];
 
-      await HospitalDataService.updatePatient(this.patientId, {
+      const updatedPatient = await HospitalDataService.updatePatient(this.patientId, {
         hospitalization_records: updatedRecords
       });
 
       this.showAddHospitalizationForm = false;
       this.newHospitalization = { description: '' };
-      await this.loadData();
+
+      // Update patient state directly
+      if (updatedPatient) {
+        this.patient = { ...updatedPatient };
+        this.editPatient = { ...updatedPatient };
+      } else {
+        await this.loadData();
+      }
     } catch (error) {
       console.error('Error adding hospitalization:', error);
       alert('Chyba pri pridávaní hospitalizácie');
@@ -122,13 +156,20 @@ export class HospitalPatientDetail {
           : record
       ) || [];
 
-      await HospitalDataService.updatePatient(this.patientId, {
+      const updatedPatient = await HospitalDataService.updatePatient(this.patientId, {
         hospitalization_records: updatedRecords
       });
 
       this.showEditHospitalizationForm = false;
       this.editHospitalization = { id: '', description: '' };
-      await this.loadData();
+
+      // Update patient state directly
+      if (updatedPatient) {
+        this.patient = { ...updatedPatient };
+        this.editPatient = { ...updatedPatient };
+      } else {
+        await this.loadData();
+      }
     } catch (error) {
       console.error('Error updating hospitalization:', error);
       alert('Chyba pri aktualizácii hospitalizácie');
@@ -145,11 +186,17 @@ export class HospitalPatientDetail {
         record => record.id !== hospitalizationId
       ) || [];
 
-      await HospitalDataService.updatePatient(this.patientId, {
+      const updatedPatient = await HospitalDataService.updatePatient(this.patientId, {
         hospitalization_records: updatedRecords
       });
 
-      await this.loadData();
+      // Update patient state directly
+      if (updatedPatient) {
+        this.patient = { ...updatedPatient };
+        this.editPatient = { ...updatedPatient };
+      } else {
+        await this.loadData();
+      }
     } catch (error) {
       console.error('Error deleting hospitalization:', error);
       alert('Chyba pri mazaní hospitalizácie');
@@ -199,7 +246,7 @@ export class HospitalPatientDetail {
           <h2>{this.patient.first_name} {this.patient.last_name}</h2>
           <button
             class="btn-primary"
-            onClick={() => this.showEditForm = true}
+            onClick={() => this.handleOpenEditForm()}
           >
             ✏️ Upraviť údaje
           </button>
