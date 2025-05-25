@@ -6,7 +6,7 @@ import { Component, h, State, Prop } from '@stencil/core';
   shadow: true,
 })
 export class SarsabsimApp {
-  @Prop() apiBase: string = 'http://localhost:8080/api';
+  @Prop() apiBase: string;
   @State() currentView: string = 'departments';
   @State() selectedDepartmentId: string = '';
   @State() selectedBedId: string = '';
