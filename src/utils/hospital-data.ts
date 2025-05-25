@@ -213,16 +213,18 @@ export class HospitalDataService {
     });
   }
 
-  static updateDepartment(id: string, updates: Partial<Department>): Promise<Department | null> {
+  static updateDepartment(id: string, department: Department): Promise<Department | null> {
     return new Promise(resolve => {
       setTimeout(() => {
         const deptIndex = mockDepartments.findIndex(d => d._id === id);
         if (deptIndex >= 0) {
-          mockDepartments[deptIndex] = {
-            ...mockDepartments[deptIndex],
-            ...updates,
+          // Ensure the ID and timestamps are preserved/updated correctly
+          const updatedDepartment: Department = {
+            ...department,
+            _id: id,
             updated_at: new Date().toISOString()
           };
+          mockDepartments[deptIndex] = updatedDepartment;
           resolve(mockDepartments[deptIndex]);
         } else {
           resolve(null);
@@ -273,21 +275,24 @@ export class HospitalDataService {
     });
   }
 
-  static updateBed(id: string, updates: Partial<Bed>): Promise<Bed | null> {
+  static updateBed(id: string, bed: Bed): Promise<Bed | null> {
     return new Promise(resolve => {
       setTimeout(() => {
         const bedIndex = mockBeds.findIndex(b => b._id === id);
         if (bedIndex >= 0) {
           const oldBed = mockBeds[bedIndex];
-          mockBeds[bedIndex] = {
-            ...mockBeds[bedIndex],
-            ...updates,
+
+          // Ensure the ID and timestamps are preserved/updated correctly
+          const updatedBed: Bed = {
+            ...bed,
+            _id: id,
             updated_at: new Date().toISOString()
           };
+          mockBeds[bedIndex] = updatedBed;
 
           // Update department capacity when bed occupancy changes
           const wasOccupied = !!oldBed.status.patient_id;
-          const isOccupied = !!mockBeds[bedIndex].status.patient_id;
+          const isOccupied = !!updatedBed.status.patient_id;
 
           if (wasOccupied !== isOccupied) {
             const departmentIndex = mockDepartments.findIndex(d => d._id === oldBed.department_id);
@@ -324,16 +329,18 @@ export class HospitalDataService {
     });
   }
 
-  static updatePatient(id: string, updates: Partial<Patient>): Promise<Patient | null> {
+  static updatePatient(id: string, patient: Patient): Promise<Patient | null> {
     return new Promise(resolve => {
       setTimeout(() => {
         const patientIndex = mockPatients.findIndex(p => p._id === id);
         if (patientIndex >= 0) {
-          mockPatients[patientIndex] = {
-            ...mockPatients[patientIndex],
-            ...updates,
+          // Ensure the ID and timestamps are preserved/updated correctly
+          const updatedPatient: Patient = {
+            ...patient,
+            _id: id,
             updated_at: new Date().toISOString()
           };
+          mockPatients[patientIndex] = updatedPatient;
           resolve(mockPatients[patientIndex]);
         } else {
           resolve(null);

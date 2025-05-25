@@ -1,6 +1,6 @@
 import { Component, h, State, Event, EventEmitter, Prop } from '@stencil/core';
 import { HospitalApiService } from '../../utils/hospital-api-service';
-import { Department } from '../../api/hospital-management';
+import { Department, Bed } from '../../api/hospital-management';
 
 @Component({
   tag: 'hospital-departments-list',
@@ -10,6 +10,7 @@ import { Department } from '../../api/hospital-management';
 export class HospitalDepartmentsList {
   @Prop() apiBase: string;
   @State() departments: Department[] = [];
+  @State() departmentBeds: { [departmentId: string]: Bed[] } = {};
   @State() loading: boolean = true;
   @State() showAddForm: boolean = false;
   @State() showEditForm: boolean = false;
@@ -30,11 +31,66 @@ export class HospitalDepartmentsList {
     this.loading = true;
     try {
       this.departments = await this.hospitalApiService.getDepartments();
+
+      // Load beds for each department to calculate actual occupancy
+      const bedsPromises = this.departments.map(async (dept) => {
+        try {
+          const beds = await this.hospitalApiService.getBedsByDepartment(dept.id!);
+          return { departmentId: dept.id!, beds };
+        } catch (error) {
+          console.error(`Error loading beds for department ${dept.id}:`, error);
+          return { departmentId: dept.id!, beds: [] };
+        }
+      });
+
+      const bedsResults = await Promise.all(bedsPromises);
+
+      // Store beds by department ID
+      this.departmentBeds = {};
+      bedsResults.forEach(({ departmentId, beds }) => {
+        this.departmentBeds[departmentId] = beds;
+      });
+
+      console.log('DEPARTMENTS LIST - Loaded departments and beds:', {
+        departments: this.departments.length,
+        departmentBeds: Object.keys(this.departmentBeds).length
+      });
+
     } catch (error) {
       console.error('Error loading departments:', error);
     } finally {
       this.loading = false;
     }
+  }
+
+  private getActualBeds(departmentId: string): number {
+    const beds = this.departmentBeds[departmentId] || [];
+    return beds.length;
+  }
+
+  private getOccupiedBeds(departmentId: string): number {
+    const beds = this.departmentBeds[departmentId] || [];
+    const occupiedCount = beds.filter(bed => {
+      const patientId = bed.status.patientId || (bed.status as any).patient_id;
+      return patientId && patientId.trim() !== '';
+    }).length;
+
+    // Debug logging
+    const dept = this.departments.find(d => d.id === departmentId);
+    if (dept) {
+      console.log(`DEPARTMENTS LIST - ${dept.name || 'Unnamed'} (${departmentId.slice(-4)}):`, {
+        actualBeds: beds.length,
+        occupiedBeds: occupiedCount,
+        storedOccupied: dept.capacity.occupiedBeds,
+        storedActual: dept.capacity.actualBeds
+      });
+    }
+
+    return occupiedCount;
+  }
+
+  private getAvailableBeds(departmentId: string): number {
+    return this.getActualBeds(departmentId) - this.getOccupiedBeds(departmentId);
   }
 
   private handleDepartmentClick(department: Department) {
@@ -85,12 +141,25 @@ export class HospitalDepartmentsList {
     }
 
     try {
-      await this.hospitalApiService.updateDepartment(this.editingDepartmentId, {
+      // Find the original department to get all fields
+      const originalDepartment = this.departments.find(d => d.id === this.editingDepartmentId);
+      if (!originalDepartment) {
+        alert('Oddelenie nenájdené');
+        return;
+      }
+
+      // Create complete department object with all required fields
+      const updatedDepartment: Department = {
+        id: originalDepartment.id,
         name: this.editDepartment.name,
         description: this.editDepartment.description,
-        floor: this.editDepartment.floor,
-        capacity: this.editDepartment.capacity
-      });
+        floor: this.editDepartment.floor || originalDepartment.floor,
+        capacity: this.editDepartment.capacity || originalDepartment.capacity,
+        createdAt: originalDepartment.createdAt,
+        updatedAt: originalDepartment.updatedAt // This will be updated by the service
+      };
+
+      await this.hospitalApiService.updateDepartment(this.editingDepartmentId, updatedDepartment);
 
       this.showEditForm = false;
       this.editDepartment = {};
@@ -99,6 +168,33 @@ export class HospitalDepartmentsList {
     } catch (error) {
       console.error('Error updating department:', error);
       alert('Chyba pri aktualizácii oddelenia');
+    }
+  }
+
+  private async handleDeleteDepartment(department: Department) {
+    // Check if department has beds
+    const beds = this.departmentBeds[department.id!] || [];
+    if (beds.length > 0) {
+      alert('Nemôžete vymazať oddelenie ktoré má lôžka. Najprv vymaže všetky lôžka.');
+      return;
+    }
+
+    if (!confirm(`Naozaj chcete vymazať oddelenie "${department.name}"? Táto akcia sa nedá vrátiť späť.`)) {
+      return;
+    }
+
+    try {
+      const success = await this.hospitalApiService.deleteDepartment(department.id!);
+
+      if (success) {
+        alert('Oddelenie bolo úspešne vymazané');
+        await this.loadData(); // Reload the list
+      } else {
+        alert('Chyba pri vymazávaní oddelenia');
+      }
+    } catch (error) {
+      console.error('Error deleting department:', error);
+      alert('Chyba pri vymazávaní oddelenia');
     }
   }
 
@@ -153,6 +249,16 @@ export class HospitalDepartmentsList {
                   >
                     ✏️
                   </button>
+                  <button
+                    class="delete-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      this.handleDeleteDepartment(dept);
+                    }}
+                    title="Vymazať oddelenie"
+                  >
+                    🗑️
+                  </button>
                 </div>
               </div>
               <p class="department-description">{dept.description}</p>
@@ -163,16 +269,16 @@ export class HospitalDepartmentsList {
                 </div>
                 <div class="info-item">
                   <span class="label">Kapacita:</span>
-                  <span class="value">{dept.capacity.occupiedBeds}/{dept.capacity.actualBeds}</span>
+                  <span class="value">{this.getOccupiedBeds(dept.id!)}/{this.getActualBeds(dept.id!)}</span>
                 </div>
                 <div class="capacity-bar">
                   <div
                     class="capacity-fill"
-                    style={{width: `${(dept.capacity.occupiedBeds / dept.capacity.actualBeds) * 100}%`}}
+                    style={{width: `${this.getActualBeds(dept.id!) > 0 ? (this.getOccupiedBeds(dept.id!) / this.getActualBeds(dept.id!)) * 100 : 0}%`}}
                   ></div>
                 </div>
                 <div class="capacity-text">
-                  {dept.capacity.actualBeds - dept.capacity.occupiedBeds} voľných lôžok
+                  {this.getAvailableBeds(dept.id!)} voľných lôžok
                 </div>
               </div>
             </div>

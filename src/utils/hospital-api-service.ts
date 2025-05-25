@@ -71,14 +71,11 @@ export class HospitalApiService {
     }
   }
 
-  async updateDepartment(id: string, updates: Partial<Department>): Promise<Department | null> {
+  async updateDepartment(id: string, department: Department): Promise<Department | null> {
     try {
-      // Merge updates with id to create complete department object
-      const departmentData = { ...updates, id: id } as Department;
-
       const response = await this.departmentsApi.updateDepartmentRaw({
         departmentId: id,
-        department: departmentData
+        department: department
       });
 
       if (response.raw.status < 299) {
@@ -94,6 +91,29 @@ export class HospitalApiService {
         return null;
       }
       throw new Error(`Cannot update department: ${err.message || "unknown"}`);
+    }
+  }
+
+  async deleteDepartment(id: string): Promise<boolean> {
+    try {
+      console.log('API SERVICE - deleteDepartment called with ID:', id);
+      const response = await this.departmentsApi.deleteDepartmentRaw({ departmentId: id });
+
+      if (response.raw.status < 299) {
+        console.log('API SERVICE - deleteDepartment successful');
+        return true;
+      } else if (response.raw.status === 404) {
+        console.log('API SERVICE - deleteDepartment - department not found');
+        return false;
+      } else {
+        throw new Error(`Cannot delete department: ${response.raw.statusText}`);
+      }
+    } catch (err: any) {
+      console.error('Error deleting department:', err);
+      if (err.message.includes('404')) {
+        return false;
+      }
+      throw new Error(`Cannot delete department: ${err.message || "unknown"}`);
     }
   }
 
@@ -114,9 +134,20 @@ export class HospitalApiService {
 
   async getBedsByDepartment(departmentId: string): Promise<Bed[]> {
     try {
+      console.log('API SERVICE - getBedsByDepartment called with departmentId:', departmentId);
       const response = await this.bedsApi.getDepartmentBedsRaw({ departmentId });
       if (response.raw.status < 299) {
-        return await response.value();
+        const result = await response.value();
+        console.log('API SERVICE - getBedsByDepartment response:', JSON.stringify(result, null, 2));
+
+        // Log each bed's status to see the mapping
+        result.forEach((bed, index) => {
+          console.log(`API SERVICE - Bed ${index} status:`, JSON.stringify(bed.status, null, 2));
+          console.log(`API SERVICE - Bed ${index} patientId:`, bed.status.patientId);
+          console.log(`API SERVICE - Bed ${index} is occupied:`, !!bed.status.patientId);
+        });
+
+        return result;
       } else {
         throw new Error(`Cannot retrieve beds: ${response.raw.statusText}`);
       }
@@ -128,9 +159,15 @@ export class HospitalApiService {
 
   async getBed(id: string): Promise<Bed | null> {
     try {
+      console.log('API SERVICE - getBed called with ID:', id);
       const response = await this.bedsApi.getBedRaw({ bedId: id });
       if (response.raw.status < 299) {
-        return await response.value();
+        const result = await response.value();
+        console.log('API SERVICE - getBed response:', JSON.stringify(result, null, 2));
+        console.log('API SERVICE - getBed departmentId:', result?.departmentId);
+        console.log('API SERVICE - getBed bedType:', result?.bedType);
+        console.log('API SERVICE - getBed bedQuality:', result?.bedQuality);
+        return result;
       } else if (response.raw.status === 404) {
         return null;
       } else {
@@ -161,18 +198,23 @@ export class HospitalApiService {
     }
   }
 
-  async updateBed(id: string, updates: Partial<Bed>): Promise<Bed | null> {
+  async updateBed(id: string, bed: Bed): Promise<Bed | null> {
     try {
-      // Merge updates with id to create complete bed object
-      const bedData = { ...updates, id: id } as Bed;
+      console.log('API SERVICE - updateBed called with ID:', id);
+      console.log('API SERVICE - updateBed called with bed object:', JSON.stringify(bed, null, 2));
+      console.log('API SERVICE - bed.departmentId:', bed.departmentId);
+      console.log('API SERVICE - bed.bedType:', bed.bedType);
+      console.log('API SERVICE - bed.bedQuality:', bed.bedQuality);
 
       const response = await this.bedsApi.updateBedRaw({
         bedId: id,
-        bed: bedData
+        bed: bed
       });
 
       if (response.raw.status < 299) {
-        return await response.value();
+        const result = await response.value();
+        console.log('API SERVICE - updateBed response:', JSON.stringify(result, null, 2));
+        return result;
       } else if (response.raw.status === 404) {
         return null;
       } else {
@@ -184,6 +226,29 @@ export class HospitalApiService {
         return null;
       }
       throw new Error(`Cannot update bed: ${err.message || "unknown"}`);
+    }
+  }
+
+  async deleteBed(id: string): Promise<boolean> {
+    try {
+      console.log('API SERVICE - deleteBed called with ID:', id);
+      const response = await this.bedsApi.deleteBedRaw({ bedId: id });
+
+      if (response.raw.status < 299) {
+        console.log('API SERVICE - deleteBed successful');
+        return true;
+      } else if (response.raw.status === 404) {
+        console.log('API SERVICE - deleteBed - bed not found');
+        return false;
+      } else {
+        throw new Error(`Cannot delete bed: ${response.raw.statusText}`);
+      }
+    } catch (err: any) {
+      console.error('Error deleting bed:', err);
+      if (err.message.includes('404')) {
+        return false;
+      }
+      throw new Error(`Cannot delete bed: ${err.message || "unknown"}`);
     }
   }
 
@@ -221,31 +286,11 @@ export class HospitalApiService {
     }
   }
 
-  async updatePatient(id: string, updates: Partial<Patient>): Promise<Patient | null> {
+  async updatePatient(id: string, patient: Patient): Promise<Patient | null> {
     try {
-      // First get the current patient to ensure we have all required fields
-      const currentPatient = await this.getPatient(id);
-      if (!currentPatient) {
-        return null;
-      }
-
-      // Merge updates with current patient data to ensure all required fields are present
-      const patientData: Patient = {
-        ...currentPatient,
-        ...updates,
-        id: id, // Ensure ID is preserved
-        // Ensure required fields are not undefined
-        firstName: updates.firstName ?? currentPatient.firstName,
-        lastName: updates.lastName ?? currentPatient.lastName,
-        birthDate: updates.birthDate ?? currentPatient.birthDate,
-        age: updates.age ?? currentPatient.age,
-        gender: updates.gender ?? currentPatient.gender,
-        hospitalizationRecords: updates.hospitalizationRecords ?? currentPatient.hospitalizationRecords
-      };
-
       const response = await this.patientsApi.updatePatientRaw({
         patientId: id,
-        patient: patientData
+        patient: patient
       });
 
       if (response.raw.status < 299) {
@@ -314,10 +359,13 @@ export class HospitalApiService {
 
       const updatedRecords = [...(patient.hospitalizationRecords || []), newRecord];
 
-      // Update patient with new records
-      return await this.updatePatient(patientId, {
+      // Update patient with new records - pass complete patient object
+      const updatedPatient: Patient = {
+        ...patient,
         hospitalizationRecords: updatedRecords
-      });
+      };
+
+      return await this.updatePatient(patientId, updatedPatient);
     } catch (err: any) {
       console.error('Error adding hospitalization record:', err);
       throw new Error(`Cannot add hospitalization record: ${err.message || "unknown"}`);
@@ -339,10 +387,13 @@ export class HospitalApiService {
           : record
       );
 
-      // Update patient with modified records
-      return await this.updatePatient(patientId, {
+      // Update patient with modified records - pass complete patient object
+      const updatedPatient: Patient = {
+        ...patient,
         hospitalizationRecords: updatedRecords
-      });
+      };
+
+      return await this.updatePatient(patientId, updatedPatient);
     } catch (err: any) {
       console.error('Error updating hospitalization record:', err);
       throw new Error(`Cannot update hospitalization record: ${err.message || "unknown"}`);
@@ -362,10 +413,13 @@ export class HospitalApiService {
         record => record.id !== recordId
       );
 
-      // Update patient with filtered records
-      return await this.updatePatient(patientId, {
+      // Update patient with filtered records - pass complete patient object
+      const updatedPatient: Patient = {
+        ...patient,
         hospitalizationRecords: updatedRecords
-      });
+      };
+
+      return await this.updatePatient(patientId, updatedPatient);
     } catch (err: any) {
       console.error('Error deleting hospitalization record:', err);
       throw new Error(`Cannot delete hospitalization record: ${err.message || "unknown"}`);

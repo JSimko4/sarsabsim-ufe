@@ -45,7 +45,7 @@ export interface UpdateBedRequest {
 
 /**
  * BedsApi - interface
- * 
+ *
  * @export
  * @interface BedsApiInterface
  */
@@ -149,7 +149,7 @@ export interface BedsApiInterface {
 }
 
 /**
- * 
+ *
  */
 export class BedsApi extends runtime.BaseAPI implements BedsApiInterface {
 

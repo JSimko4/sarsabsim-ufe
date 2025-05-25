@@ -70,19 +70,24 @@ export class HospitalPatientDetail {
     }
 
     try {
-      const updatedData = {
+      // Create complete patient object with all required fields
+      const updatedPatient: Patient = {
+        id: this.patient.id,
         firstName: this.editPatient.firstName,
         lastName: this.editPatient.lastName,
         birthDate: this.editPatient.birthDate,
+        age: this.calculateAge(this.editPatient.birthDate),
         gender: this.editPatient.gender,
-        phone: this.editPatient.phone,
-        email: this.editPatient.email,
-        hospitalizationRecords: this.patient?.hospitalizationRecords || []
+        phone: this.editPatient.phone || '',
+        email: this.editPatient.email || '',
+        hospitalizationRecords: this.patient?.hospitalizationRecords || [],
+        createdAt: this.patient.createdAt,
+        updatedAt: this.patient.updatedAt // This will be updated by the service
       };
 
-      console.log('UPDATE: Posielam na server:', updatedData);
+      console.log('UPDATE: Posielam na server celý objekt:', updatedPatient);
 
-      const result = await this.hospitalApiService.updatePatient(this.patientId, updatedData);
+      const result = await this.hospitalApiService.updatePatient(this.patientId, updatedPatient);
 
       console.log('UPDATE: Výsledok zo servera:', result);
 

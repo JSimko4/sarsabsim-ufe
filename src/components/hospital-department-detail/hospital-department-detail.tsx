@@ -32,6 +32,17 @@ export class HospitalDepartmentDetail {
     }
   }
 
+  private calculateOccupiedBeds(): number {
+    return this.beds.filter(bed => {
+      const patientId = bed.status.patientId || (bed.status as any).patient_id;
+      return patientId && patientId.trim() !== '';
+    }).length;
+  }
+
+  private calculateAvailableBeds(): number {
+    return this.beds.length - this.calculateOccupiedBeds();
+  }
+
   private async loadData() {
     this.loading = true;
     try {
@@ -40,8 +51,28 @@ export class HospitalDepartmentDetail {
         this.hospitalApiService.getBedsByDepartment(this.departmentId)
       ]);
 
+      console.log('DEPARTMENT DETAIL - Department:', department);
+      console.log('DEPARTMENT DETAIL - Beds:', JSON.stringify(beds, null, 2));
+
+      // Debug bed occupancy calculation
+      beds.forEach((bed, index) => {
+        console.log(`DEPARTMENT DETAIL - Bed ${index}:`, {
+          id: bed.id?.slice(-4),
+          patientId: bed.status.patientId,
+          isOccupied: !!bed.status.patientId,
+          statusClass: this.getBedStatusClass(bed),
+          description: bed.status.description
+        });
+      });
+
       this.department = department;
       this.beds = beds;
+
+      // Log calculated vs stored occupancy
+      const calculatedOccupied = this.calculateOccupiedBeds();
+      const storedOccupied = department?.capacity.occupiedBeds || 0;
+      console.log(`DEPARTMENT DETAIL - Calculated occupied beds: ${calculatedOccupied}, Stored occupied beds: ${storedOccupied}`);
+
     } catch (error) {
       console.error('Error loading department data:', error);
     } finally {
@@ -59,6 +90,17 @@ export class HospitalDepartmentDetail {
       return;
     }
 
+    // Check if adding a new bed would exceed maximum capacity
+    const currentBedCount = this.beds.length;
+    const maxCapacity = this.department?.capacity.maximumBeds || 0;
+
+    if (currentBedCount >= maxCapacity) {
+      alert(`Nemôžete pridať ďalšie lôžko. Oddelenie už dosiahlo maximálnu kapacitu ${maxCapacity} lôžok.`);
+      return;
+    }
+
+    console.log(`DEPARTMENT DETAIL - Adding bed: current=${currentBedCount}, max=${maxCapacity}`);
+
     try {
       const bedData = {
         departmentId: this.departmentId,
@@ -71,14 +113,17 @@ export class HospitalDepartmentDetail {
 
       await this.hospitalApiService.createBed(this.departmentId, bedData);
 
-      // Update department capacity
+      // Update department capacity - only update actualBeds, occupiedBeds is calculated dynamically
       if (this.department) {
-        await this.hospitalApiService.updateDepartment(this.departmentId, {
+        const updatedDepartment: Department = {
+          ...this.department,
           capacity: {
             ...this.department.capacity,
-            actualBeds: this.department.capacity.actualBeds + 1
+            actualBeds: this.beds.length + 1 // Will be updated after reload
           }
-        });
+        };
+
+        await this.hospitalApiService.updateDepartment(this.departmentId, updatedDepartment);
       }
 
       this.showAddBedForm = false;
@@ -91,7 +136,11 @@ export class HospitalDepartmentDetail {
   }
 
   private getBedStatusClass(bed: Bed): string {
-    return bed.status.patientId ? 'occupied' : 'available';
+    // Check for patientId (mapped) or patient_id (raw) and ensure it's not empty
+    const patientId = bed.status.patientId || (bed.status as any).patient_id;
+    const isOccupied = patientId && patientId.trim() !== '';
+    console.log(`getBedStatusClass - Bed ${bed.id?.slice(-4)}: patientId="${bed.status.patientId}", patient_id="${(bed.status as any).patient_id}", isOccupied=${isOccupied}`);
+    return isOccupied ? 'occupied' : 'available';
   }
 
   private getPatientName(patientId: string): string {
@@ -100,7 +149,10 @@ export class HospitalDepartmentDetail {
   }
 
   private getBedStatusText(bed: Bed): string {
-    return bed.status.patientId ? 'Obsadené' : 'Voľné';
+    // Check for patientId (mapped) or patient_id (raw) and ensure it's not empty
+    const patientId = bed.status.patientId || (bed.status as any).patient_id;
+    const isOccupied = patientId && patientId.trim() !== '';
+    return isOccupied ? 'Obsadené' : 'Voľné';
   }
 
   render() {
@@ -128,10 +180,19 @@ export class HospitalDepartmentDetail {
           </button>
           <h2>{this.department.name}</h2>
           <button
-            class="btn-primary"
-            onClick={() => this.showAddBedForm = true}
+            class={`btn-primary ${this.beds.length >= (this.department?.capacity.maximumBeds || 0) ? 'disabled' : ''}`}
+            onClick={() => {
+              if (this.beds.length >= (this.department?.capacity.maximumBeds || 0)) {
+                return; // Don't open modal if at capacity
+              }
+              this.showAddBedForm = true;
+            }}
+            disabled={this.beds.length >= (this.department?.capacity.maximumBeds || 0)}
+            title={this.beds.length >= (this.department?.capacity.maximumBeds || 0)
+              ? `Maximálna kapacita ${this.department?.capacity.maximumBeds} lôžok dosiahnutá`
+              : `Pridať lôžko (${this.beds.length}/${this.department?.capacity.maximumBeds})`}
           >
-            + Pridať lôžko
+            + Pridať lôžko ({this.beds.length}/{this.department?.capacity.maximumBeds})
           </button>
         </div>
 
@@ -153,16 +214,18 @@ export class HospitalDepartmentDetail {
               </div>
               <div class="info-item">
                 <span class="label">Aktuálne lôžka:</span>
-                <span>{this.department.capacity.actualBeds}</span>
+                <span class={this.beds.length >= this.department.capacity.maximumBeds ? 'at-capacity' : ''}>
+                  {this.beds.length}/{this.department.capacity.maximumBeds}
+                </span>
               </div>
               <div class="info-item">
                 <span class="label">Obsadené:</span>
-                <span class="occupied">{this.department.capacity.occupiedBeds}</span>
+                <span class="occupied">{this.calculateOccupiedBeds()}</span>
               </div>
               <div class="info-item">
                 <span class="label">Voľné:</span>
                 <span class="available">
-                  {this.department.capacity.actualBeds - this.department.capacity.occupiedBeds}
+                  {this.calculateAvailableBeds()}
                 </span>
               </div>
             </div>
@@ -175,16 +238,16 @@ export class HospitalDepartmentDetail {
                 <div
                   class="chart-fill"
                   style={{
-                    width: `${(this.department.capacity.occupiedBeds / this.department.capacity.actualBeds) * 100 || 0}%`
+                    width: `${this.beds.length > 0 ? (this.calculateOccupiedBeds() / this.beds.length) * 100 : 0}%`
                   }}
                 ></div>
               </div>
               <div class="chart-labels">
                 <span class="available">
-                  Voľné: {this.department.capacity.actualBeds - this.department.capacity.occupiedBeds}
+                  Voľné: {this.calculateAvailableBeds()}
                 </span>
                 <span class="occupied">
-                  Obsadené: {this.department.capacity.occupiedBeds}
+                  Obsadené: {this.calculateOccupiedBeds()}
                 </span>
               </div>
             </div>
@@ -229,11 +292,11 @@ export class HospitalDepartmentDetail {
                     <span>{(bed.bedQuality * 100).toFixed(0)}%</span>
                   </div>
 
-                  {bed.status.patientId && (
+                  {(bed.status.patientId || (bed.status as any).patient_id) && (
                     <div class="bed-detail">
                       <span class="label">Pacient:</span>
                       <span class="patient-name">
-                        {this.getPatientName(bed.status.patientId)}
+                        {this.getPatientName(bed.status.patientId || (bed.status as any).patient_id)}
                       </span>
                     </div>
                   )}
@@ -248,7 +311,7 @@ export class HospitalDepartmentDetail {
           </div>
         </div>
 
-        {this.showAddBedForm && (
+        {this.showAddBedForm && this.beds.length < (this.department?.capacity.maximumBeds || 0) && (
           <div class="modal-overlay">
             <div class="modal">
               <div class="modal-header">
@@ -259,6 +322,15 @@ export class HospitalDepartmentDetail {
                 >
                   ×
                 </button>
+              </div>
+
+              <div class="capacity-info">
+                <p>Aktuálna kapacita: {this.beds.length}/{this.department?.capacity.maximumBeds} lôžok</p>
+                {this.beds.length >= (this.department?.capacity.maximumBeds || 0) - 1 && (
+                  <p class="warning-text">
+                    ⚠️ Blížite sa k maximálnej kapacite oddelenia
+                  </p>
+                )}
               </div>
 
               <div class="modal-content">

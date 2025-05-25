@@ -41,7 +41,7 @@ export interface UpdateDepartmentRequest {
 
 /**
  * DepartmentsApi - interface
- * 
+ *
  * @export
  * @interface DepartmentsApiInterface
  */
@@ -129,7 +129,7 @@ export interface DepartmentsApiInterface {
 }
 
 /**
- * 
+ *
  */
 export class DepartmentsApi extends runtime.BaseAPI implements DepartmentsApiInterface {
 

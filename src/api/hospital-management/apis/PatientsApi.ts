@@ -41,7 +41,7 @@ export interface UpdatePatientRequest {
 
 /**
  * PatientsApi - interface
- * 
+ *
  * @export
  * @interface PatientsApiInterface
  */
@@ -129,7 +129,7 @@ export interface PatientsApiInterface {
 }
 
 /**
- * 
+ *
  */
 export class PatientsApi extends runtime.BaseAPI implements PatientsApiInterface {
 

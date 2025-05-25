@@ -29,9 +29,10 @@ export class HospitalBedDetail {
   }
 
   async componentWillUpdate() {
-    if (this.bedId) {
-      await this.loadData();
-    }
+    // Remove automatic reload to prevent interference with updates
+    // if (this.bedId) {
+    //   await this.loadData();
+    // }
   }
 
   private async loadData() {
@@ -42,12 +43,14 @@ export class HospitalBedDetail {
         this.hospitalApiService.getPatients()
       ]);
 
+      console.log('LOAD DATA - Bed from API:', bed);
       this.bed = bed;
       this.allPatients = patients;
 
       // Load patient details if bed is occupied
-      if (bed?.status.patientId) {
-        this.patient = await this.hospitalApiService.getPatient(bed.status.patientId);
+      const patientId = bed?.status.patientId || (bed?.status as any)?.patient_id;
+      if (patientId && patientId.trim() !== '') {
+        this.patient = await this.hospitalApiService.getPatient(patientId);
       } else {
         this.patient = null;
       }
@@ -71,13 +74,32 @@ export class HospitalBedDetail {
         return;
       }
 
-      // Update bed status
-      const updatedBed = await this.hospitalApiService.updateBed(this.bedId, {
+      // Update bed status - first get current bed data to ensure we have complete object
+      const currentBed = await this.hospitalApiService.getBed(this.bedId);
+      if (!currentBed) {
+        alert('Lôžko nenájdené');
+        return;
+      }
+
+      console.log('ASSIGN PATIENT - Current bed from API:', JSON.stringify(currentBed, null, 2));
+      console.log('ASSIGN PATIENT - Current bed departmentId:', currentBed.departmentId);
+      console.log('ASSIGN PATIENT - Current bed bedType:', currentBed.bedType);
+      console.log('ASSIGN PATIENT - Current bed bedQuality:', currentBed.bedQuality);
+
+      const updatedBedData: Bed = {
+        ...currentBed,
         status: {
           patientId: this.selectedPatientId,
           description: `Obsadené pacientom ${selectedPatient.firstName} ${selectedPatient.lastName}`
         }
-      });
+      };
+
+      console.log('ASSIGN PATIENT - Sending bed object:', JSON.stringify(updatedBedData, null, 2));
+      console.log('ASSIGN PATIENT - Sending departmentId:', updatedBedData.departmentId);
+      console.log('ASSIGN PATIENT - Sending bedType:', updatedBedData.bedType);
+      console.log('ASSIGN PATIENT - Sending bedQuality:', updatedBedData.bedQuality);
+
+      const updatedBed = await this.hospitalApiService.updateBed(this.bedId, updatedBedData);
 
       // Add hospitalization record to patient
       await this.hospitalApiService.addHospitalizationRecord(this.selectedPatientId, {
@@ -99,13 +121,26 @@ export class HospitalBedDetail {
     }
 
     try {
-      // Update bed status to available
-      await this.hospitalApiService.updateBed(this.bedId, {
+      // Update bed status to available - first get current bed data
+      const currentBed = await this.hospitalApiService.getBed(this.bedId);
+      if (!currentBed) {
+        alert('Lôžko nenájdené');
+        return;
+      }
+
+      console.log('BEFORE DISCHARGE - Current bed from API:', currentBed);
+
+      const updatedBedData: Bed = {
+        ...currentBed,
         status: {
           patientId: '',
           description: 'Voľné lôžko'
         }
-      });
+      };
+
+      console.log('AFTER DISCHARGE - Sending bed object:', updatedBedData);
+
+      await this.hospitalApiService.updateBed(this.bedId, updatedBedData);
 
       this.showAssignPatientForm = false;
       await this.loadData();
@@ -116,13 +151,47 @@ export class HospitalBedDetail {
   }
 
   private handleOpenEditForm() {
-    this.editBed = { ...this.bed };
+    // Create a deep copy of the current bed data for editing
+    this.editBed = {
+      ...this.bed,
+      status: {
+        ...this.bed.status
+      }
+    };
     this.showEditBedForm = true;
   }
 
   private async handleUpdateBed() {
     try {
-      const updatedBed = await this.hospitalApiService.updateBed(this.bedId, this.editBed);
+      // Get fresh bed data from API to ensure we have the latest state
+      const currentBed = await this.hospitalApiService.getBed(this.bedId);
+      if (!currentBed) {
+        alert('Lôžko nenájdené');
+        return;
+      }
+
+      console.log('BEFORE UPDATE - Current bed from API:', currentBed);
+
+      // Create complete bed object with all required fields, preserving existing values
+      // and only updating the fields that were actually changed
+      const updatedBedData: Bed = {
+        ...currentBed, // Start with current data from API
+        // Only override with editBed values that are not null/undefined/empty
+        ...(this.editBed.bedType && { bedType: this.editBed.bedType }),
+        ...(this.editBed.bedQuality !== undefined && this.editBed.bedQuality !== null && { bedQuality: this.editBed.bedQuality }),
+        ...(this.editBed.status && {
+          status: {
+            ...currentBed.status, // Preserve existing status
+            ...(this.editBed.status.description !== undefined && { description: this.editBed.status.description }),
+            // Preserve patientId if it exists
+            ...(currentBed.status.patientId && { patientId: currentBed.status.patientId })
+          }
+        })
+      };
+
+      console.log('AFTER UPDATE - Sending bed object:', updatedBedData);
+
+      const updatedBed = await this.hospitalApiService.updateBed(this.bedId, updatedBedData);
 
       if (updatedBed) {
         this.bed = { ...updatedBed };
@@ -130,6 +199,7 @@ export class HospitalBedDetail {
 
       this.showEditBedForm = false;
       this.editBed = {};
+      await this.loadData(); // Reload data to ensure consistency
     } catch (error) {
       console.error('Error updating bed:', error);
       alert('Chyba pri aktualizácii lôžka');
@@ -137,11 +207,17 @@ export class HospitalBedDetail {
   }
 
   private getBedStatusClass(): string {
-    return this.bed?.status.patientId ? 'occupied' : 'available';
+    // Check for patientId (mapped) or patient_id (raw) and ensure it's not empty
+    const patientId = this.bed?.status.patientId || (this.bed?.status as any)?.patient_id;
+    const isOccupied = patientId && patientId.trim() !== '';
+    return isOccupied ? 'occupied' : 'available';
   }
 
   private getBedStatusText(): string {
-    return this.bed?.status.patientId ? 'Obsadené' : 'Voľné';
+    // Check for patientId (mapped) or patient_id (raw) and ensure it's not empty
+    const patientId = this.bed?.status.patientId || (this.bed?.status as any)?.patient_id;
+    const isOccupied = patientId && patientId.trim() !== '';
+    return isOccupied ? 'Obsadené' : 'Voľné';
   }
 
   private getAvailablePatients(): Patient[] {
@@ -150,6 +226,34 @@ export class HospitalBedDetail {
       // You might want to add logic here to check if patient is already hospitalized
       return true;
     });
+  }
+
+  private async handleDeleteBed() {
+    if (!confirm('Naozaj chcete vymazať toto lôžko? Táto akcia sa nedá vrátiť späť.')) {
+      return;
+    }
+
+    // Check if bed is occupied
+    const patientId = this.bed?.status.patientId || (this.bed?.status as any)?.patient_id;
+    if (patientId && patientId.trim() !== '') {
+      alert('Nemôžete vymazať obsadené lôžko. Najprv prepustite pacienta.');
+      return;
+    }
+
+    try {
+      // Delete the bed
+      const success = await this.hospitalApiService.deleteBed(this.bedId);
+
+      if (success) {
+        alert('Lôžko bolo úspešne vymazané');
+        this.back.emit(); // Go back to department view
+      } else {
+        alert('Chyba pri vymazávaní lôžka');
+      }
+    } catch (error) {
+      console.error('Error deleting bed:', error);
+      alert('Chyba pri vymazávaní lôžka');
+    }
   }
 
   render() {
@@ -183,7 +287,14 @@ export class HospitalBedDetail {
             >
               ✏️ Upraviť lôžko
             </button>
-            {this.bed.status.patientId ? (
+            <button
+              class="btn-danger"
+              onClick={() => this.handleDeleteBed()}
+              title="Vymazať lôžko"
+            >
+              🗑️ Vymazať
+            </button>
+            {(this.bed.status.patientId || (this.bed.status as any)?.patient_id) ? (
               <button
                 class="btn-warning"
                 onClick={() => this.handleDischargePatient()}
@@ -331,10 +442,10 @@ export class HospitalBedDetail {
                       bedType: (e.target as HTMLSelectElement).value as BedBedTypeEnum
                     }}
                   >
-                    <option value={BedBedTypeEnum.Standard} selected={this.editBed.bedType === BedBedTypeEnum.Standard}>Štandardné</option>
-                    <option value={BedBedTypeEnum.Intensive} selected={this.editBed.bedType === BedBedTypeEnum.Intensive}>Intenzívne</option>
-                    <option value={BedBedTypeEnum.Isolation} selected={this.editBed.bedType === BedBedTypeEnum.Isolation}>Izolačné</option>
-                    <option value={BedBedTypeEnum.Recovery} selected={this.editBed.bedType === BedBedTypeEnum.Recovery}>Zotavovňa</option>
+                    <option value={BedBedTypeEnum.Standard} selected={(this.editBed.bedType || this.bed?.bedType) === BedBedTypeEnum.Standard}>Štandardné</option>
+                    <option value={BedBedTypeEnum.Intensive} selected={(this.editBed.bedType || this.bed?.bedType) === BedBedTypeEnum.Intensive}>Intenzívne</option>
+                    <option value={BedBedTypeEnum.Isolation} selected={(this.editBed.bedType || this.bed?.bedType) === BedBedTypeEnum.Isolation}>Izolačné</option>
+                    <option value={BedBedTypeEnum.Recovery} selected={(this.editBed.bedType || this.bed?.bedType) === BedBedTypeEnum.Recovery}>Zotavovňa</option>
                   </select>
                 </div>
 
@@ -345,7 +456,7 @@ export class HospitalBedDetail {
                     min="0"
                     max="1"
                     step="0.1"
-                    value={this.editBed.bedQuality}
+                    value={this.editBed.bedQuality !== undefined ? this.editBed.bedQuality : this.bed?.bedQuality}
                     onInput={(e) => this.editBed = {
                       ...this.editBed,
                       bedQuality: parseFloat((e.target as HTMLInputElement).value)
@@ -356,7 +467,7 @@ export class HospitalBedDetail {
                 <div class="form-group">
                   <label>Poznámka</label>
                   <textarea
-                    value={this.editBed.status?.description}
+                    value={this.editBed.status?.description !== undefined ? this.editBed.status.description : this.bed?.status?.description || ''}
                     onInput={(e) => this.editBed = {
                       ...this.editBed,
                       status: {

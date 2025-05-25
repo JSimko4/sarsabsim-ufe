@@ -58,6 +58,23 @@
   box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
+.btn-primary.disabled,
+.btn-primary:disabled {
+  background-color: #ccc !important;
+  color: #666 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.btn-primary.disabled:hover,
+.btn-primary:disabled:hover {
+  background-color: #ccc !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
 .btn-secondary {
   background-color: transparent;
   color: #666;
@@ -442,4 +459,32 @@
   .beds-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.status-badge.occupied {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.at-capacity {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+.capacity-info {
+  padding: 1rem 1.5rem;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.capacity-info p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.warning-text {
+  color: #ff9800 !important;
+  font-weight: 500;
+  margin-top: 0.5rem !important;
 }

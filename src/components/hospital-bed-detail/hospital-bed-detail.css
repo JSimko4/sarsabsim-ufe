@@ -114,6 +114,21 @@
   background: #e0a800;
 }
 
+.btn-danger {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.btn-danger:hover {
+  background: #c82333;
+}
+
 .bed-info {
   display: grid;
   gap: 20px;
